@@ -1,0 +1,68 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kucero
+rules:
+# Allow kucero to read spec.unschedulable
+# Allow kubectl to drain/uncordon
+#
+# NB: These permissions are tightly coupled to the bundled version of kubectl; the ones below
+# match https://github.com/kubernetes/kubernetes/blob/v1.12.1/pkg/kubectl/cmd/drain.go
+#
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs:     ["get", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs:     ["list","delete","get"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets"]
+  verbs:     ["get"]
+- apiGroups: [""]
+  resources: ["pods/eviction"]
+  verbs:     ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kucero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kucero
+subjects:
+- kind: ServiceAccount
+  name: kucero
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kucero
+  namespace: kube-system
+rules:
+# Allow kucero to lock/unlock itself
+- apiGroups:     ["apps"]
+  resources:     ["daemonsets"]
+  resourceNames: ["kucero"]
+  verbs:         ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kucero
+  namespace: kube-system
+subjects:
+- kind: ServiceAccount
+  namespace: kube-system
+  name: kucero
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kucero
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kucero
+  namespace: kube-system

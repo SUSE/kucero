@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -20,30 +21,32 @@ var (
 	version = "unreleased"
 
 	// Command line flags
-	kubeconfigPath     string
-	pollingPeriod      time.Duration
-	dsNamespace        string
-	dsName             string
-	lockAnnotation     string
-	certExporterURL    string
-	expiryTimeToRotate time.Duration
+	// kubeconfigPath                         string
+	// includeCerts, excludeCerts             string
+	// includeKubeconfigs, excludeKubeconfigs string
+	pollingPeriod, expiryTimeToRotate   time.Duration
+	dsNamespace, dsName, lockAnnotation string
 )
 
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "kucero",
-		Short: "KUbernetes CErtificate ROtation",
+		Short: "KUbeadm CErtificate ROtation",
 		Run:   root,
 	}
 
-	rootCmd.PersistentFlags().StringVar(&kubeconfigPath, "kubeconfig", "",
-		"path to the kubeconfig. Only required if out-of-cluster.")
+	// rootCmd.PersistentFlags().StringVar(&includeCerts, "include-certs", "",
+	// 	"File globs to include when looking for certs")
+	// rootCmd.PersistentFlags().StringVar(&excludeCerts, "exclude-certs", "",
+	// 	"File globs to exclude when looking for certs")
+	// rootCmd.PersistentFlags().StringVar(&includeKubeconfigs, "include-kubeconfigs", "",
+	// 	"File globs to include when looking for kubeconfigs")
+	// rootCmd.PersistentFlags().StringVar(&excludeKubeconfigs, "exclude-kubeconfigs", "",
+	// 	"File globs to exclude when looking for kubeconfigs")
 
 	rootCmd.PersistentFlags().DurationVar(&pollingPeriod, "polling-period", time.Hour,
 		"certificate rotation check period")
-	rootCmd.PersistentFlags().StringVar(&certExporterURL, "cert-exporter-url", "localhost:8080/metrics",
-		"cert-exporter instance to probe for certificate information")
-	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "expiry-time-to-rotate", time.Hour,
+	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "expiry-time-to-rotate", time.Hour*24*365,
 		"rotates certificate when certificate less than expiry time")
 
 	rootCmd.PersistentFlags().StringVar(&dsNamespace, "ds-namespace", "kube-system",
@@ -59,19 +62,19 @@ func main() {
 }
 
 func root(cmd *cobra.Command, args []string) {
-	logrus.Infof("KUbernetes CErtificate ROtation Daemon: %s", version)
+	logrus.Infof("KUbeadm CErtificate ROtation Daemon: %s", version)
 
-	nodeID := os.Getenv("KUCERO_NODE_ID")
-	if nodeID == "" {
-		logrus.Fatal("KUCERO_NODE_ID environment variable required")
+	nodeName := os.Getenv("KUCERO_NODE_NAME")
+	if nodeName == "" {
+		logrus.Fatal("KUCERO_NODE_NAME environment variable required")
 	}
 
-	logrus.Infof("Node ID: %s", nodeID)
+	logrus.Infof("Node Name: %s", nodeName)
 	logrus.Infof("Lock Annotation: %s/%s:%s", dsNamespace, dsName, lockAnnotation)
-	logrus.Infof("Certificate Check Every %v On URL %s", pollingPeriod, certExporterURL)
+	logrus.Infof("Certificate Check Every %v", pollingPeriod)
 	logrus.Infof("Rotates Certificate If Expiry Time Less Than %v", expiryTimeToRotate)
 
-	rotateCertificateWhenNeeded(nodeID)
+	rotateCertificateWhenNeeded(nodeName)
 }
 
 // nodeMeta is used to remember information across reboots
@@ -79,12 +82,8 @@ type nodeMeta struct {
 	Unschedulable bool `json:"unschedulable"`
 }
 
-func rotateCertificateWhenNeeded(nodeID string) {
-	// config, err := rest.InClusterConfig()
-	// if err != nil {
-	// 	logrus.Fatal(err)
-	// }
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+func rotateCertificateWhenNeeded(nodeName string) {
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		logrus.Fatal(err)
 	}
@@ -94,7 +93,7 @@ func rotateCertificateWhenNeeded(nodeID string) {
 		logrus.Fatal(err)
 	}
 
-	lock := daemonsetlock.New(client, nodeID, dsNamespace, dsName, lockAnnotation)
+	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
 
 	nodeMeta := nodeMeta{}
 	if holding(lock, &nodeMeta) {
@@ -103,80 +102,172 @@ func rotateCertificateWhenNeeded(nodeID string) {
 
 	periodChannel := time.Tick(pollingPeriod)
 	for {
-		// read prometheus URL cert_exporter metrics
-		resp, err := http.Get(certExporterURL)
+		// TODO: rotate worker node's kubelet server certificate
+		node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 		if err != nil {
 			logrus.Fatal(err)
 		}
-		fmt.Printf("%v\n", resp)
 
-		// list the certs less than expiryTimeToRotate
-
-		// rotate certificates
-
-		node, err := client.CoreV1().Nodes().Get(nodeID, metav1.GetOptions{})
-		if err != nil {
-			logrus.Fatal(err)
-		}
-		_, exist := node.GetLabels()["node-role.kubernetes.io/master="]
+		labels := node.GetLabels()
+		_, exist := labels["node-role.kubernetes.io/master="]
 		if !exist {
-			logrus.Infof("Skipping worker nodes")
+			// logrus.Infof("Skipping worker nodes for now")
 			continue
+		}
+
+		// check certificate expiration
+		err = checkCertificateExpiration()
+		if err != nil {
+			logrus.Fatal(err)
+		}
+
+		// // load certificate
+		// m, err := secondsToExpiryFromCertAsFile(includeCerts)
+		// if err != nil {
+		// 	logrus.Fatal(err)
+		// }
+
+		// // list the certs less than expiryTimeToRotate
+		// // expiryTimeToRotate.Seconds()
+		// // m.notAfter.Second()
+		// elapsed := time.Until(m.notAfter)
+		// fmt.Printf("%v\n", elapsed)
+		// if elapsed > expiryTimeToRotate {
+		// 	// elapsed time is greater than user setting expiryTimeToRotate
+		// 	continue
+		// }
+
+		// // elapsed time is less than user setting expiryTimeToRotate
+		// logrus.Infof("Going to roate certificate %s", m.subject.CommonName)
+
+		// // find CA in the same directory path
+		// dir, err := filepath.Abs(filepath.Dir(includeCerts))
+		// if err != nil {
+		// 	logrus.Fatal(err)
+		// }
+		// logrus.Infof("dir: %+v\n", dir)
+
+		// caSignerFound := false
+		// err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		// 	if err != nil {
+		// 		logrus.Warnf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+		// 		return err
+		// 	}
+		// 	if !info.IsDir() {
+		// 		// load certificate
+		// 		tmpCert, err := secondsToExpiryFromCertAsFile(path)
+		// 		if err == nil {
+		// 			// logrus.Infof("ok, try this one: %v\n", path)
+		// 			if reflect.DeepEqual(m.issuer, tmpCert.subject) {
+		// 				caSignerFound = true
+		// 				logrus.Infof("Found CA signer cert path: %q\n", path)
+		// 				return nil
+		// 			}
+		// 		}
+		// 	}
+		// 	return nil
+		// })
+		// if err != nil {
+		// 	logrus.Warnf("error walking the path %q: %v\n", dir, err)
+		// }
+		// if !caSignerFound {
+		// 	logrus.Warn("sorry cannot found ca")
+		// }
+
+		// backup certificate
+		if err := backupKubeconfig(); err != nil {
+			logrus.Errorf("%v\n", err)
+		}
+		if err := backupCertificate(); err != nil {
+			logrus.Errorf("%v\n", err)
 		}
 
 		nodeMeta.Unschedulable = node.Spec.Unschedulable
 		if acquire(lock, &nodeMeta) {
-			rotateCertificate(nodeID)
+			rotateCertificate()
 			for {
 				logrus.Infof("Waiting for certificate rotation")
 				time.Sleep(time.Minute)
 			}
 		}
 
-		/*
-			if window.Contains(time.Now()) && rebootRequired() {
-				node, err := client.CoreV1().Nodes().Get(nodeID, metav1.GetOptions{})
-				if err != nil {
-					logrus.Fatal(err)
-				}
-				_, exist := node.GetLabels()["node-role.kubernetes.io/master="]
-				if !exist {
-					logrus.Infof("Skipping worker nodes")
-					continue
-				}
+		// rortate certificate
+		if err := rotateCertificate(); err != nil {
+			logrus.Errorf("%v\n", err)
+		}
 
-				nodeMeta.Unschedulable = node.Spec.Unschedulable
+		// restart kubelet
+		if err := restartKubelet(); err != nil {
+			logrus.Errorf("%v\n", err)
+		}
 
-				if acquire(lock, &nodeMeta) {
-					rotateCertificate(nodeID)
-					for {
-						logrus.Infof("Waiting for certificate rotation")
-						time.Sleep(time.Minute)
-					}
-				}
-			}
-		*/
 		<-periodChannel
 	}
 }
 
-func rebootRequired() bool {
-	return true
-}
-
-func rotateCertificate(nodeID string) {
-	logrus.Infof("Commanding certificate rotate")
+func checkCertificateExpiration() error {
+	logrus.Info("Commanding check certificate expiration")
 
 	// Relies on hostPID:true and privileged:true to enter host mount space
-	if err := newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", "-rf", "/etc/kubernetes/pki", "/etc/kubernetes/pki.bak").Run(); err != nil {
-		logrus.Fatalf("Error invoking cp command: %v", err)
+	cmd := newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "check-expiration")
+	if err := cmd.Run(); err != nil {
+		logrus.Errorf("%v", cmd.Stderr)
 	}
-	if err := newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", "all").Run(); err != nil {
-		logrus.Fatalf("Error invoking kubeadm command: %v", err)
+
+	fmt.Printf("%s\n", cmd.Stdout)
+
+	return nil
+}
+
+func backupKubeconfig() error {
+	logrus.Info("Commanding backup kubeconfig")
+
+	kubeconfigs := []string{
+		"/etc/kubernetes/admin.conf",
+		"/etc/kubernetes/controller-manager.conf",
+		"/etc/kubernetes/scheduler.conf",
 	}
-	if err := newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/systemctl", "restart", "kubelet").Run(); err != nil {
-		logrus.Fatalf("Error invoking system command: %v", err)
+
+	var errors error
+	for _, kubeconfig := range kubeconfigs {
+		basename := filepath.Base(kubeconfig)
+		ext := filepath.Ext(basename)
+		backupKubeconfigPath := strings.TrimSuffix(basename, ext) + "-" + time.Now().Format("20060102150405") + ext + ".bak"
+
+		// Relies on hostPID:true and privileged:true to enter host mount space
+		cmd := newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", "-rf", kubeconfig, backupKubeconfigPath)
+		err := cmd.Run()
+		if err != nil {
+			errors = fmt.Errorf("%w; ", err)
+			logrus.Fatalf("Error invoking cp -rf %s %s command: %v", kubeconfig, backupKubeconfigPath, err)
+		}
 	}
+
+	return errors
+}
+
+func backupCertificate() error {
+	logrus.Info("Commanding backup certificate")
+
+	dirPath := "/etc/kubernetes/pki"
+	backupDirPath := dirPath + "-" + time.Now().Format("20060102150405") + ".bak"
+
+	// Relies on hostPID:true and privileged:true to enter host mount space
+	return newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", "-rf", dirPath, backupDirPath).Run()
+}
+
+func rotateCertificate() error {
+	logrus.Info("Commanding certificate rotate")
+
+	// Relies on hostPID:true and privileged:true to enter host mount space
+	return newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", "all").Run()
+}
+
+func restartKubelet() error {
+	logrus.Info("Commanding restart kubelet")
+
+	// Relies on hostPID:true and privileged:true to enter host mount space
+	return newCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/systemctl", "restart", "kubelet").Run()
 }
 
 // newCommand creates a new Command with stdout/stderr wired to our standard logger
