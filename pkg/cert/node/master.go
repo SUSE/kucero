@@ -28,7 +28,7 @@ func (m *Master) CheckExpiration() error {
 	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "check-expiration")
 	err = cmd.Run()
 	if err != nil {
-		logrus.Fatalf("Error invoking command: %v", cmd.Args)
+		logrus.Fatalf("Error invoking %s: %v", cmd.Args, err)
 	}
 
 	return err
@@ -84,7 +84,7 @@ func backupKubeconfig(nodeName string) error {
 		err = cmd.Run()
 		if err != nil {
 			errors = fmt.Errorf("%w; ", err)
-			logrus.Fatalf("Error invoking command: %v", cmd.Args)
+			logrus.Fatalf("Error invoking %s: %v", cmd.Args, err)
 		}
 	}
 
@@ -104,7 +104,7 @@ func backupCertificate(nodeName string) error {
 	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", "--recursive", dir, backupDir)
 	err = cmd.Run()
 	if err != nil {
-		logrus.Fatalf("Error invoking command: %v", cmd.Args)
+		logrus.Fatalf("Error invoking %s: %v", cmd.Args, err)
 	}
 
 	return err
@@ -120,7 +120,7 @@ func rotateCertificate(nodeName string) error {
 	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", "all")
 	err = cmd.Run()
 	if err != nil {
-		logrus.Fatalf("Error invoking command: %v", cmd.Args)
+		logrus.Fatalf("Error invoking %s: %v", cmd.Args, err)
 	}
 
 	return err

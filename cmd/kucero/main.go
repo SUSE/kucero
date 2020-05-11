@@ -12,7 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/weaveworks/kured/pkg/daemonsetlock"
 
-	cert "github.com/jenting/kucero/pkg/cert"
+	"github.com/jenting/kucero/pkg/cert"
+	"github.com/jenting/kucero/pkg/host"
 )
 
 var (
@@ -63,7 +64,8 @@ func root(cmd *cobra.Command, args []string) {
 	rotateCertificateWhenNeeded(nodeName)
 }
 
-// nodeMeta is used to remember information across rotate certificates
+// nodeMeta is used to remember information across nodes
+// whom is doing certificate rotation
 type nodeMeta struct {
 	Unschedulable bool `json:"unschedulable"`
 }
@@ -96,9 +98,6 @@ func rotateCertificateWhenNeeded(nodeName string) {
 
 	nodeMeta := nodeMeta{}
 	if holding(lock, &nodeMeta) {
-		if !nodeMeta.Unschedulable {
-			// uncordon(nodeID)
-		}
 		release(lock)
 	}
 
@@ -111,21 +110,24 @@ func rotateCertificateWhenNeeded(nodeName string) {
 			logrus.Fatal(err)
 		}
 
-		// certificates need to rotation
-		nodeMeta.Unschedulable = node.Spec.Unschedulable
-
+		// TODO: check certificates need to rotation
 		if acquire(lock, &nodeMeta) {
 			if !nodeMeta.Unschedulable {
-				// drain(nodeID)
+				host.Cordon(nodeName)
+				host.Drain(nodeName)
 			}
 
 			logrus.Info("Waiting for certificate rotation")
-
 			if err := certNode.Rotate(); err != nil {
 				logrus.Fatal(err)
 			}
-
 			logrus.Info("Certificate rotation done")
+
+			if !nodeMeta.Unschedulable {
+				host.Uncordon(nodeName)
+			}
+
+			release(lock)
 		}
 
 		<-timer.C

@@ -8,7 +8,7 @@ func RestartKubelet(nodeName string) error {
 	// Relies on hostPID:true and privileged:true to enter host mount space
 	cmd := NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/systemctl", "restart", "kubelet")
 	if err := cmd.Run(); err != nil {
-		logrus.Fatalf("Error invoking command: %v", cmd.Args)
+		logrus.Fatalf("Error invoking %s: %v", cmd.Args, err)
 		return err
 	}
 	return nil
