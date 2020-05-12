@@ -33,7 +33,7 @@ func main() {
 
 	rootCmd.PersistentFlags().DurationVar(&pollingPeriod, "polling-period", time.Hour,
 		"certificate rotation check period")
-	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "expiry-time-to-rotate", time.Hour*24*365,
+	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "expiry-time-to-rotate", time.Hour*24*30,
 		"rotates certificate when certificate less than expiry time")
 
 	rootCmd.PersistentFlags().StringVar(&dsNamespace, "ds-namespace", "kube-system",
@@ -92,7 +92,7 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		isMasterNode = true
 	}
 
-	certNode := cert.NewNode(isMasterNode, nodeName)
+	certNode := cert.NewNode(isMasterNode, nodeName, expiryTimeToRotate)
 
 	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
 
@@ -106,19 +106,22 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		logrus.Info("Check certificate expiration")
 
 		// check the certificate needs expiration
-		if err := certNode.CheckExpiration(); err != nil {
+		expiryCerts, err := certNode.CheckExpiration()
+		if err != nil {
 			logrus.Fatal(err)
 		}
 
-		// TODO: check certificates need to rotation
-		if acquire(lock, &nodeMeta) {
+		// rotates the certificate
+		if len(expiryCerts) > 0 && acquire(lock, &nodeMeta) {
+			logrus.Infof("The expiry certificiates are %v\n", expiryCerts)
+
 			if !nodeMeta.Unschedulable {
 				host.Cordon(nodeName)
 				host.Drain(nodeName)
 			}
 
 			logrus.Info("Waiting for certificate rotation")
-			if err := certNode.Rotate(); err != nil {
+			if err := certNode.Rotate(expiryCerts); err != nil {
 				logrus.Fatal(err)
 			}
 			logrus.Info("Certificate rotation done")

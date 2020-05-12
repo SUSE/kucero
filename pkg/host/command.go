@@ -22,3 +22,14 @@ func NewCommand(name string, arg ...string) *exec.Cmd {
 
 	return cmd
 }
+
+func NewCommandWithStdout(name string, arg ...string) *exec.Cmd {
+	cmd := exec.Command(name, arg...)
+
+	cmd.Stderr = logrus.NewEntry(logrus.StandardLogger()).
+		WithField("cmd", cmd.Args[0]).
+		WithField("std", "err").
+		WriterLevel(logrus.WarnLevel)
+
+	return cmd
+}
