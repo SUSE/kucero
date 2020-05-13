@@ -24,8 +24,8 @@ type Certificate interface {
 }
 
 // checkExpiry checks if the time `t` is less than the time duration `expiryTimeToRotate`
-func checkExpiry(name string, t time.Time, expiryTimeToRotate time.Duration) bool {
-	tn := time.Now()
+func checkExpiry(name string, t time.Time, expiryTimeToRotate time.Duration, clock Clock) bool {
+	tn := clock.Now()
 	if t.Before(tn) {
 		logrus.Infof("The certificate %s is expiry already", name)
 		return true

@@ -27,6 +27,7 @@ func init() {
 type Master struct {
 	nodeName           string
 	expiryTimeToRotate time.Duration
+	clock              Clock
 }
 
 // NewMaster returns a master node certificate interface
@@ -34,6 +35,7 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	return &Master{
 		nodeName:           nodeName,
 		expiryTimeToRotate: expiryTimeToRotate,
+		clock:              NewRealClock(),
 	}
 }
 
@@ -44,13 +46,13 @@ func (m *Master) CheckExpiration() (map[OWNER][]string, error) {
 
 	logrus.Infof("Commanding check %s node certificate expiration", m.nodeName)
 
-	kubeadmExpiryCertificates, err := kubeadmCheckExpiration(m.expiryTimeToRotate)
+	kubeadmExpiryCertificates, err := kubeadmCheckExpiration(m.expiryTimeToRotate, m.clock)
 	if err != nil {
 		return expiryCertificates, err
 	}
 	expiryCertificates[kubeadm] = kubeadmExpiryCertificates
 
-	kubeletExpiryCertificates, err := kubeletCheckExpiration(m.expiryTimeToRotate)
+	kubeletExpiryCertificates, err := kubeletCheckExpiration(m.expiryTimeToRotate, m.clock)
 	if err != nil {
 		return expiryCertificates, err
 	}

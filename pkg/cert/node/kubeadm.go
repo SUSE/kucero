@@ -26,7 +26,7 @@ var kubeadmCertificates map[string]string = map[string]string{
 
 // kubeadmCheckExpiration executes `kubeadm alpha certs check-expiration`
 // returns the certificates which are going to expires
-func kubeadmCheckExpiration(expiryTimeToRotate time.Duration) ([]string, error) {
+func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]string, error) {
 	expiryCertificates := []string{}
 
 	// Relies on hostPID:true and privileged:true to enter host mount space
@@ -40,7 +40,7 @@ func kubeadmCheckExpiration(expiryTimeToRotate time.Duration) ([]string, error) 
 	stdoutS := string(stdout)
 	kv := parseKubeadmCertsCheckExpiration(stdoutS)
 	for cert, t := range kv {
-		expiry := checkExpiry(cert, t, expiryTimeToRotate)
+		expiry := checkExpiry(cert, t, expiryTimeToRotate, clock)
 		if expiry {
 			expiryCertificates = append(expiryCertificates, cert)
 		}

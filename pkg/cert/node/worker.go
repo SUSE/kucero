@@ -20,6 +20,7 @@ func init() {
 type Worker struct {
 	nodeName           string
 	expiryTimeToRotate time.Duration
+	clock              Clock
 }
 
 // NewWorker returns a worker node certificate interface
@@ -27,6 +28,7 @@ func NewWorker(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	return &Worker{
 		nodeName:           nodeName,
 		expiryTimeToRotate: expiryTimeToRotate,
+		clock:              NewRealClock(),
 	}
 }
 
@@ -37,7 +39,7 @@ func (w *Worker) CheckExpiration() (map[OWNER][]string, error) {
 
 	logrus.Infof("Commanding check %s node certificate expiration", w.nodeName)
 
-	kubeletExpiryCertificates, err := kubeletCheckExpiration(w.expiryTimeToRotate)
+	kubeletExpiryCertificates, err := kubeletCheckExpiration(w.expiryTimeToRotate, w.clock)
 	if err != nil {
 		return expiryCertificates, err
 	}

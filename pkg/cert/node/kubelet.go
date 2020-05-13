@@ -17,7 +17,7 @@ var kubeletCertificates map[string]string = map[string]string{
 
 // kubeletCheckExpiration executes `openssl x509 -noout -enddate -in /var/lib/kubelet/pki/kubelet.crt`
 // returns the certificates which are going to expires
-func kubeletCheckExpiration(expiryTimeToRotate time.Duration) ([]string, error) {
+func kubeletCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]string, error) {
 	expiryCertificates := []string{}
 
 	var errs error
@@ -38,7 +38,7 @@ func kubeletCheckExpiration(expiryTimeToRotate time.Duration) ([]string, error) 
 			continue
 		}
 
-		if checkExpiry(name, *t, expiryTimeToRotate) {
+		if checkExpiry(name, *t, expiryTimeToRotate, clock) {
 			expiryCertificates = append(expiryCertificates, name)
 		}
 	}
