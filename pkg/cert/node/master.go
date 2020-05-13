@@ -16,6 +16,7 @@ type Master struct {
 	expiryTimeToRotate time.Duration
 }
 
+// NewMaster returns a master node certificate interface
 func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	return &Master{
 		nodeName:           nodeName,
@@ -24,8 +25,7 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 }
 
 // CheckExpiration checks master node certificate
-// returns true if one of the certificate
-// is going to expiry
+// returns true if one of the certificate is going to expiry
 func (m *Master) CheckExpiration() ([]string, error) {
 	expiryCertificates := []string{}
 
@@ -42,7 +42,7 @@ func (m *Master) CheckExpiration() ([]string, error) {
 	stdoutS := string(stdout)
 	kv := parseKubeadmCertsCheckExpiration(stdoutS)
 	for cert, t := range kv {
-		expiry := CheckExpiry(cert, t, m.expiryTimeToRotate)
+		expiry := checkExpiry(cert, t, m.expiryTimeToRotate)
 		if expiry {
 			expiryCertificates = append(expiryCertificates, cert)
 		}
@@ -72,8 +72,8 @@ func (m *Master) Rotate(expiryCertificates []string) error {
 	return nil
 }
 
-// backupCertificate backups the certificate/kubeconfig under folder /etc/kubernetes
-// issued by kubeadm
+// backupCertificate backups the certificate/kubeconfig
+// under folder /etc/kubernetes issued by kubeadm
 func backupCertificate(nodeName string, expiryCertificates []string) error {
 	logrus.Infof("Commanding backup %s node certs", nodeName)
 
@@ -115,7 +115,7 @@ func backupCertificate(nodeName string, expiryCertificates []string) error {
 	return errors
 }
 
-// rotateCertificate calls kubeadm alpha certs renew all
+// rotateCertificate calls `kubeadm alpha certs renew all`
 // on the host system to rotates kubeadm issued certificates
 func rotateCertificate(nodeName string, expiryCerts []string) error {
 	logrus.Infof("Commanding rotate %s node certificate", nodeName)
@@ -130,6 +130,8 @@ func rotateCertificate(nodeName string, expiryCerts []string) error {
 	return err
 }
 
+// parseKubeadmCertsCheckExpiration processes the `kubeadm alpha certs check-expiration`
+// output and returns the certificate and expires information
 func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
 	certExpires := make(map[string]time.Time, 0)
 

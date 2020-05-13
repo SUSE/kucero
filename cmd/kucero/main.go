@@ -111,7 +111,10 @@ func rotateCertificateWhenNeeded(nodeName string) {
 			logrus.Fatal(err)
 		}
 
-		// rotates the certificate
+		// rotates the certificate if there are certificates going to expire
+		// and the lock can be acquired.
+		// if the lock cannot be acquired, it will wait `pollingPeriod` time
+		// and try to acquire the lock again.
 		if len(expiryCerts) > 0 && acquire(lock, &nodeMeta) {
 			logrus.Infof("The expiry certificiates are %v\n", expiryCerts)
 

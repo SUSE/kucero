@@ -14,6 +14,7 @@ type Worker struct {
 	expiryTimeToRotate time.Duration
 }
 
+// NewWorker returns a worker node certificate interface
 func NewWorker(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	return &Worker{
 		nodeName:           nodeName,
@@ -58,7 +59,7 @@ func (w *Worker) CheckExpiration() ([]string, error) {
 		return expiryCertificates, err
 	}
 
-	if CheckExpiry(certName, t, w.expiryTimeToRotate) {
+	if checkExpiry(certName, t, w.expiryTimeToRotate) {
 		expiryCertificates = append(expiryCertificates, certName)
 	}
 

@@ -2,6 +2,8 @@ package host
 
 import "github.com/sirupsen/logrus"
 
+// RestartKubelet executes `systemctl restart kubelet`
+// on the host system
 func RestartKubelet(nodeName string) error {
 	logrus.Infof("Commanding restart kubelet on %s node", nodeName)
 

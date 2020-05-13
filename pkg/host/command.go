@@ -23,6 +23,7 @@ func NewCommand(name string, arg ...string) *exec.Cmd {
 	return cmd
 }
 
+// NewCommand creates a new Command with stderr wired to our standard logger
 func NewCommandWithStdout(name string, arg ...string) *exec.Cmd {
 	cmd := exec.Command(name, arg...)
 

@@ -4,6 +4,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// Uncordon executes `kubectl uncordon <node-name>`
+// on the host system
 func Uncordon(nodeName string) error {
 	logrus.Infof("Uncordoning %s node", nodeName)
 
@@ -16,6 +18,8 @@ func Uncordon(nodeName string) error {
 	return err
 }
 
+// Cordon executes `kubectl cordon <node-name>`
+// on the host system
 func Cordon(nodeName string) error {
 	logrus.Infof("Cordoning %s node", nodeName)
 
@@ -28,6 +32,8 @@ func Cordon(nodeName string) error {
 	return err
 }
 
+// Drain executes `kubectl drain --ignore-daemonsets --delete-local-data --force <node-name>`
+// on the host system
 func Drain(nodeName string) error {
 	logrus.Infof("Draining %s node", nodeName)
 

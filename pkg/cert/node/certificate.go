@@ -15,7 +15,8 @@ type Certificate interface {
 	Rotate(expiryCertificates []string) error
 }
 
-func CheckExpiry(name string, t time.Time, expiryTimeToRotate time.Duration) bool {
+// checkExpiry checks if the time `t` is less than the time duration `expiryTimeToRotate`
+func checkExpiry(name string, t time.Time, expiryTimeToRotate time.Duration) bool {
 	tn := time.Now()
 	if t.Before(tn) {
 		logrus.Infof("The certificate %s is expiry already", name)
