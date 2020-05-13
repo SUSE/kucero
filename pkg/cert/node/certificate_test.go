@@ -49,7 +49,7 @@ func Test_checkExpiry(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := checkExpiry(tt.name, tt.inputT, tt.inputExpiryTimeToRotate, stubClock)
+			got := checkCertificateExpiry(tt.name, tt.inputT, tt.inputExpiryTimeToRotate, stubClock)
 			if !reflect.DeepEqual(got, tt.expect) {
 				t.Errorf("got %t is not equals to expected %t", got, tt.expect)
 			}

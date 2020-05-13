@@ -40,7 +40,7 @@ func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]st
 	stdoutS := string(stdout)
 	kv := parseKubeadmCertsCheckExpiration(stdoutS)
 	for cert, t := range kv {
-		expiry := checkExpiry(cert, t, expiryTimeToRotate, clock)
+		expiry := checkCertificateExpiry(cert, t, expiryTimeToRotate, clock)
 		if expiry {
 			expiryCertificates = append(expiryCertificates, cert)
 		}
@@ -82,8 +82,8 @@ func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
 	return certExpires
 }
 
-func kubeadmRenewCerts(certName string) error {
+func kubeadmRenewCerts(certificateName, certificatePath string) error {
 	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certName)
+	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certificateName)
 	return cmd.Run()
 }

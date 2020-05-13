@@ -5,30 +5,29 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/jenting/kucero/pkg/host"
 )
-
-var workerCertificates map[string]string
-
-func init() {
-	workerCertificates = make(map[string]string, 0)
-
-	for k, v := range kubeletCertificates {
-		workerCertificates[k] = v
-	}
-}
 
 type Worker struct {
 	nodeName           string
 	expiryTimeToRotate time.Duration
 	clock              Clock
+	certificates       map[string]string
 }
 
 // NewWorker returns a worker node certificate interface
 func NewWorker(nodeName string, expiryTimeToRotate time.Duration) Certificate {
+	certificates := make(map[string]string, 0)
+	for k, v := range kubeletCertificates {
+		certificates[k] = v
+	}
+
 	return &Worker{
 		nodeName:           nodeName,
 		expiryTimeToRotate: expiryTimeToRotate,
 		clock:              NewRealClock(),
+		certificates:       certificates,
 	}
 }
 
@@ -51,24 +50,28 @@ func (w *Worker) CheckExpiration() (map[OWNER][]string, error) {
 // Rotate executes the steps to rotates the certificate
 // including backing up certificate, rotates certificate, and restart kubelet
 func (w *Worker) Rotate(expiryCertificates map[OWNER][]string) error {
-	logrus.Infof("Commanding rotate %s node certificate", w.nodeName)
-
 	var errs error
 	for owner, certificates := range expiryCertificates {
-		for _, certName := range certificates {
-			_, ok := workerCertificates[certName]
+		for _, certificateName := range certificates {
+			certificatePath, ok := w.certificates[certificateName]
 			if !ok {
 				continue
 			}
 
-			switch owner {
-			case kubelet:
-				if err := kubeletRenewCerts(certName); err != nil {
-					errs = fmt.Errorf("%w; ", err)
-					logrus.Errorf("Error invoking command: %v", err)
-				}
+			if err := backupCertificate(w.nodeName, certificateName, certificatePath); err != nil {
+				errs = fmt.Errorf("%w; ", err)
+				continue
+			}
+
+			if err := rotateCertificate(w.nodeName, owner, certificateName, certificatePath); err != nil {
+				errs = fmt.Errorf("%w; ", err)
+				continue
 			}
 		}
+	}
+
+	if err := host.RestartKubelet(w.nodeName); err != nil {
+		errs = fmt.Errorf("%w; ", err)
 	}
 
 	return errs
