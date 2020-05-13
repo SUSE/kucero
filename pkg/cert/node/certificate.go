@@ -6,13 +6,21 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type OWNER string
+
+const (
+	kubeadm OWNER = "kubeadm"
+	kubelet OWNER = "kubelet"
+)
+
 type Certificate interface {
 	// CheckExpiration checks node certificate
-	// and return the certificates which are going to expiry
-	CheckExpiration() ([]string, error)
+	// returns the certificates which are going to expires
+	CheckExpiration() (map[OWNER][]string, error)
 
 	// Rotate rotates the node certificates
-	Rotate(expiryCertificates []string) error
+	// which are going to expires
+	Rotate(expiryCertificates map[OWNER][]string) error
 }
 
 // checkExpiry checks if the time `t` is less than the time duration `expiryTimeToRotate`

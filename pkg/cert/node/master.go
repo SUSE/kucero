@@ -3,13 +3,26 @@ package node
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
-	"github.com/jenting/kucero/pkg/host"
 	"github.com/sirupsen/logrus"
+
+	"github.com/jenting/kucero/pkg/host"
 )
+
+var masterCertificates map[string]string
+
+func init() {
+	masterCertificates = make(map[string]string, 0)
+
+	for k, v := range kubeadmCertificates {
+		masterCertificates[k] = v
+	}
+	for k, v := range kubeletCertificates {
+		masterCertificates[k] = v
+	}
+}
 
 type Master struct {
 	nodeName           string
@@ -25,35 +38,30 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 }
 
 // CheckExpiration checks master node certificate
-// returns true if one of the certificate is going to expiry
-func (m *Master) CheckExpiration() ([]string, error) {
-	expiryCertificates := []string{}
+// returns the certificates which are going to expires
+func (m *Master) CheckExpiration() (map[OWNER][]string, error) {
+	expiryCertificates := map[OWNER][]string{}
 
 	logrus.Infof("Commanding check %s node certificate expiration", m.nodeName)
 
-	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "check-expiration")
-	stdout, err := cmd.Output()
+	kubeadmExpiryCertificates, err := kubeadmCheckExpiration(m.expiryTimeToRotate)
 	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
 		return expiryCertificates, err
 	}
+	expiryCertificates[kubeadm] = kubeadmExpiryCertificates
 
-	stdoutS := string(stdout)
-	kv := parseKubeadmCertsCheckExpiration(stdoutS)
-	for cert, t := range kv {
-		expiry := checkExpiry(cert, t, m.expiryTimeToRotate)
-		if expiry {
-			expiryCertificates = append(expiryCertificates, cert)
-		}
+	kubeletExpiryCertificates, err := kubeletCheckExpiration(m.expiryTimeToRotate)
+	if err != nil {
+		return expiryCertificates, err
 	}
+	expiryCertificates[kubelet] = kubeletExpiryCertificates
 
 	return expiryCertificates, nil
 }
 
 // Rotate executes the steps to rotates the certificate
 // including backing up certificate, rotates certificate, and restart kubelet
-func (m *Master) Rotate(expiryCertificates []string) error {
+func (m *Master) Rotate(expiryCertificates map[OWNER][]string) error {
 	if err := backupCertificate(m.nodeName, expiryCertificates); err != nil {
 		logrus.Errorf("%v", err)
 		return err
@@ -74,91 +82,61 @@ func (m *Master) Rotate(expiryCertificates []string) error {
 
 // backupCertificate backups the certificate/kubeconfig
 // under folder /etc/kubernetes issued by kubeadm
-func backupCertificate(nodeName string, expiryCertificates []string) error {
+func backupCertificate(nodeName string, expiryCertificates map[OWNER][]string) error {
 	logrus.Infof("Commanding backup %s node certs", nodeName)
 
-	kubeadmCerts := map[string]string{
-		"admin.conf":               "/etc/kubernetes/admin.conf",
-		"controller-manager.conf":  "/etc/kubernetes/controller-manager.conf",
-		"scheduler.conf":           "/etc/kubernetes/scheduler.conf",
-		"apiserver":                "/etc/kubernetes/pki/apiserver.crt",
-		"apiserver-etcd-client":    "/etc/kubernetes/pki/apiserver-etcd-client.crt",
-		"apiserver-kubelet-client": "/etc/kubernetes/pki/apiserver-kubelet-client.crt",
-		"front-proxy-client":       "/etc/kubernetes/pki/front-proxy-client.crt",
-		"etcd-healthcheck-client":  "/etc/kubernetes/pki/etcd/healthcheck-client.crt",
-		"etcd-peer":                "/etc/kubernetes/pki/etcd/peer.crt",
-		"etcd-server":              "/etc/kubernetes/pki/etcd/server.crt",
-	}
+	var errs error
+	for _, certificates := range expiryCertificates {
+		for _, certName := range certificates {
+			path, ok := masterCertificates[certName]
+			if !ok {
+				continue
+			}
 
-	var errors error
-	for _, cert := range expiryCertificates {
-		path, ok := kubeadmCerts[cert]
-		if !ok {
-			continue
-		}
+			dir := filepath.Dir(path)
+			base := filepath.Base(path)
+			ext := filepath.Ext(path)
+			backupPath := filepath.Join(dir, strings.TrimSuffix(base, ext)+"-"+time.Now().Format("20060102030405")+ext+".bak")
 
-		dir := filepath.Dir(path)
-		base := filepath.Base(path)
-		ext := filepath.Ext(path)
-		backupPath := filepath.Join(dir, strings.TrimSuffix(base, ext)+"-"+time.Now().Format("20060102030405")+ext+".bak")
-
-		// Relies on hostPID:true and privileged:true to enter host mount space
-		var err error
-		cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", path, backupPath)
-		err = cmd.Run()
-		if err != nil {
-			errors = fmt.Errorf("%w; ", err)
-			logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+			// Relies on hostPID:true and privileged:true to enter host mount space
+			cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/cp", path, backupPath)
+			if err := cmd.Run(); err != nil {
+				errs = fmt.Errorf("%w; ", err)
+				logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+			}
 		}
 	}
 
-	return errors
+	return errs
 }
 
-// rotateCertificate calls `kubeadm alpha certs renew all`
+// rotateCertificate calls `kubeadm alpha certs renew <cert-name>`
 // on the host system to rotates kubeadm issued certificates
-func rotateCertificate(nodeName string, expiryCerts []string) error {
+func rotateCertificate(nodeName string, expiryCertificates map[OWNER][]string) error {
 	logrus.Infof("Commanding rotate %s node certificate", nodeName)
 
-	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", "all")
-	err := cmd.Run()
-	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
-	}
-
-	return err
-}
-
-// parseKubeadmCertsCheckExpiration processes the `kubeadm alpha certs check-expiration`
-// output and returns the certificate and expires information
-func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
-	certExpires := make(map[string]time.Time, 0)
-
-	r := regexp.MustCompile("(.*) ([a-zA-Z]+ [0-9]{1,2}, [0-9]{4} [0-9]{1,2}:[0-9]{2} [a-zA-Z]+) (.*)")
-	lines := strings.Split(input, "\n")
-	parse := false
-	for _, line := range lines {
-		if parse {
-			ss := r.FindStringSubmatch(line)
-			if len(ss) < 3 {
+	var errs error
+	for owner, certificates := range expiryCertificates {
+		for _, certName := range certificates {
+			_, ok := masterCertificates[certName]
+			if !ok {
 				continue
 			}
 
-			cert := strings.TrimSpace(ss[1])
-			t, err := time.Parse("Jan 02, 2006 15:04 MST", ss[2])
-			if err != nil {
-				fmt.Printf("err: %v\n", err)
-				continue
+			switch owner {
+			case kubeadm:
+				if err := kubeadmRenewCerts(certName); err != nil {
+					errs = fmt.Errorf("%w; ", err)
+					logrus.Errorf("Error invoking command: %v", err)
+				}
+			case kubelet:
+				if err := kubeletRenewCerts(certName); err != nil {
+					errs = fmt.Errorf("%w; ", err)
+					logrus.Errorf("Error invoking command: %v", err)
+				}
 			}
-
-			certExpires[cert] = t
-		}
-
-		if strings.Contains(line, "CERTIFICATE") && strings.Contains(line, "EXPIRES") {
-			parse = true
 		}
 	}
 
-	return certExpires
+	return errs
 }

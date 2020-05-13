@@ -1,13 +1,21 @@
 package node
 
 import (
-	"errors"
-	"strings"
+	"fmt"
 	"time"
 
-	"github.com/jenting/kucero/pkg/host"
 	"github.com/sirupsen/logrus"
 )
+
+var workerCertificates map[string]string
+
+func init() {
+	workerCertificates = make(map[string]string, 0)
+
+	for k, v := range kubeletCertificates {
+		workerCertificates[k] = v
+	}
+}
 
 type Worker struct {
 	nodeName           string
@@ -23,52 +31,43 @@ func NewWorker(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 }
 
 // CheckExpiration checks worker node certificate
-func (w *Worker) CheckExpiration() ([]string, error) {
-	expiryCertificates := []string{}
-	certName := "kubelet"
+// returns the certificates which are going to expires
+func (w *Worker) CheckExpiration() (map[OWNER][]string, error) {
+	expiryCertificates := map[OWNER][]string{}
 
 	logrus.Infof("Commanding check %s node certificate expiration", w.nodeName)
 
-	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/openssl", "x509", "-noout", "-enddate", "-in", "/var/lib/kubelet/pki/kubelet.crt")
-	stdout, err := cmd.Output()
+	kubeletExpiryCertificates, err := kubeletCheckExpiration(w.expiryTimeToRotate)
 	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
 		return expiryCertificates, err
 	}
-
-	stdoutS := string(stdout)
-
-	// notAfter=Jan 02 15:04:05 2006 MST
-	if !strings.Contains(stdoutS, "notAfter") {
-		logrus.Error("Cannot found notAfter key")
-		return expiryCertificates, errors.New("Cannot found notAfter key")
-	}
-
-	ss := strings.Split(stdoutS, "=")
-	if len(ss) < 2 {
-		logrus.Error("Cannot found enddate")
-		return expiryCertificates, errors.New("Cannot found endate")
-	}
-	ts := strings.TrimRight(ss[1], "\n")
-	logrus.Infof("The certificate %s notAfter=%v", certName, ts)
-
-	t, err := time.Parse("Jan 2 15:04:05 2006 MST", ts)
-	if err != nil {
-		logrus.Errorf("Error parse time: %v", err)
-		return expiryCertificates, err
-	}
-
-	if checkExpiry(certName, t, w.expiryTimeToRotate) {
-		expiryCertificates = append(expiryCertificates, certName)
-	}
+	expiryCertificates["kubelet"] = kubeletExpiryCertificates
 
 	return expiryCertificates, nil
 }
 
 // Rotate executes the steps to rotates the certificate
 // including backing up certificate, rotates certificate, and restart kubelet
-func (w *Worker) Rotate(certs []string) error {
-	// TODO: rotate worker node's kubelet server certificate
-	return nil
+func (w *Worker) Rotate(expiryCertificates map[OWNER][]string) error {
+	logrus.Infof("Commanding rotate %s node certificate", w.nodeName)
+
+	var errs error
+	for owner, certificates := range expiryCertificates {
+		for _, certName := range certificates {
+			_, ok := workerCertificates[certName]
+			if !ok {
+				continue
+			}
+
+			switch owner {
+			case kubelet:
+				if err := kubeletRenewCerts(certName); err != nil {
+					errs = fmt.Errorf("%w; ", err)
+					logrus.Errorf("Error invoking command: %v", err)
+				}
+			}
+		}
+	}
+
+	return errs
 }
