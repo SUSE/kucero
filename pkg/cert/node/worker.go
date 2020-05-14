@@ -69,6 +69,9 @@ func (w *Worker) Rotate(expiryCertificates map[OWNER][]string) error {
 			}
 		}
 	}
+	if errs != nil {
+		return errs
+	}
 
 	if err := host.RestartKubelet(w.nodeName); err != nil {
 		errs = fmt.Errorf("%w; ", err)
