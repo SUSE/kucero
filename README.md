@@ -1,4 +1,4 @@
-![Pull Request CI Check](https://github.com/jenting/kucero/workflows/Pull%20Request%20CI%20Check/badge.svg?branch=master)
+![Build Status](https://github.com/jenting/kucero/workflows/Build%20Status/badge.svg?branch=master)
 
 ```
  _
