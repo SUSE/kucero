@@ -15,4 +15,4 @@
 vendor/
 
 # Binary
-kucero
+cmd/kucero/kucero
