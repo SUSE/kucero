@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math/rand"
 	"os"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/weaveworks/kured/pkg/daemonsetlock"
+	"github.com/weaveworks/kured/pkg/delaytick"
 
 	"github.com/jenting/kucero/pkg/cert"
 	"github.com/jenting/kucero/pkg/host"
@@ -101,8 +103,9 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		release(lock)
 	}
 
-	timer := time.NewTimer(pollingPeriod)
-	for {
+	source := rand.NewSource(time.Now().UnixNano())
+	tick := delaytick.New(source, pollingPeriod)
+	for range tick {
 		logrus.Info("Check certificate expiration")
 
 		// check the certificate needs expiration
@@ -135,7 +138,5 @@ func rotateCertificateWhenNeeded(nodeName string) {
 
 			release(lock)
 		}
-
-		<-timer.C
 	}
 }
