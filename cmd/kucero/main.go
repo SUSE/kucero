@@ -44,7 +44,7 @@ func main() {
 		"annotation in which to record locking node")
 
 	if err := rootCmd.Execute(); err != nil {
-		logrus.Fatal(err)
+		logrus.Error(err)
 	}
 }
 
@@ -108,7 +108,7 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		// check the certificate needs expiration
 		expiryCerts, err := certNode.CheckExpiration()
 		if err != nil {
-			logrus.Fatal(err)
+			logrus.Error(err)
 		}
 
 		// rotates the certificate if there are certificates going to expire
@@ -125,7 +125,7 @@ func rotateCertificateWhenNeeded(nodeName string) {
 
 			logrus.Info("Waiting for certificate rotation")
 			if err := certNode.Rotate(expiryCerts); err != nil {
-				logrus.Fatal(err)
+				logrus.Error(err)
 			}
 			logrus.Info("Certificate rotation done")
 

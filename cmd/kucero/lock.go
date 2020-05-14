@@ -8,7 +8,7 @@ import (
 func holding(lock *daemonsetlock.DaemonSetLock, metadata interface{}) bool {
 	holding, err := lock.Test(metadata)
 	if err != nil {
-		logrus.Fatalf("Error testing lock: %v", err)
+		logrus.Errorf("Error testing lock: %v", err)
 	}
 	if holding {
 		logrus.Info("Holding lock")
@@ -20,7 +20,7 @@ func acquire(lock *daemonsetlock.DaemonSetLock, metadata interface{}) bool {
 	holding, holder, err := lock.Acquire(metadata)
 	switch {
 	case err != nil:
-		logrus.Fatalf("Error acquiring lock: %v", err)
+		logrus.Errorf("Error acquiring lock: %v", err)
 		return false
 	case !holding:
 		logrus.Warnf("Lock already held: %v", holder)
@@ -34,6 +34,6 @@ func acquire(lock *daemonsetlock.DaemonSetLock, metadata interface{}) bool {
 func release(lock *daemonsetlock.DaemonSetLock) {
 	logrus.Info("Releasing lock")
 	if err := lock.Release(); err != nil {
-		logrus.Fatalf("Error releasing lock: %v", err)
+		logrus.Errorf("Error releasing lock: %v", err)
 	}
 }
