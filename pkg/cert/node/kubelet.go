@@ -3,7 +3,7 @@ package node
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 	"text/template"
 	"time"
@@ -49,8 +49,7 @@ func kubeletCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]st
 }
 
 const (
-	opensslConfTemplate = `
-[req]
+	opensslConfTemplate = `[req]
 distinguished_name = req_distinguished_name
 req_extensions = v3_req
 prompt = no
@@ -132,15 +131,32 @@ func kubeletRenewCerts(certificateName, certificatePath string) error {
 		return err
 	}
 
-	// TODO
-	if err := ioutil.WriteFile("/tmp/openssl.conf", []byte(rendered.String()), 0600); err != nil {
-		logrus.Errorf("Error write file: %v", err)
+	// write rendered template to /var/lib/kubelet/pki/openssl.conf
+	cmd1 := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/echo", rendered.String())
+	cmd2 := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/tee", "/var/lib/kubelet/pki/openssl.conf")
+
+	r, w := io.Pipe()
+	cmd1.Stdout = w
+	cmd2.Stdin = r
+
+	if err := cmd1.Start(); err != nil {
+		logrus.Errorf("Error invoking start %s: %v", cmd1.Args, err)
 		return err
 	}
-
-	cmd = host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/dd", "of=/var/lib/kubelet/pki/openssl.conf", "<<<", fmt.Sprintf("%s", rendered.String()))
-	if err := cmd.Run(); err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+	if err := cmd2.Start(); err != nil {
+		logrus.Errorf("Error invoking start %s: %v", cmd2.Args, err)
+		return err
+	}
+	if err := cmd1.Wait(); err != nil {
+		logrus.Errorf("Error invoking wait %s: %v", cmd1.Args, err)
+		return err
+	}
+	if err := w.Close(); err != nil {
+		logrus.Errorf("Error invoking close %s: %v", cmd2.Args, err)
+		return err
+	}
+	if err := cmd2.Wait(); err != nil {
+		logrus.Errorf("Error invoking wait %s: %v", cmd2.Args, err)
 		return err
 	}
 

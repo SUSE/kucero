@@ -17,8 +17,8 @@ is going to expire within the user specified time period.
 ## Installation
 
 ```
-make docker-build DOCKER_IMAGE=$(YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG)
-make docker-build DOCKER_IMAGE=$(YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG)
+make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
+make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
 make deploy-manifest
 ```
 
