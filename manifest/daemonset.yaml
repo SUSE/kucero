@@ -26,7 +26,7 @@ spec:
       restartPolicy: Always
       containers:
         - name: kucero
-          image: jenting/kucero:latest
+          image: jenting/kucero:v1.0.0
           imagePullPolicy: Always
           securityContext:
             privileged: true # Give permission to nsenter /proc/1/ns/mnt
