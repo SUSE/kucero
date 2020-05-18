@@ -14,7 +14,6 @@ type OWNER string
 
 const (
 	kubeadm OWNER = "kubeadm"
-	kubelet OWNER = "kubelet"
 )
 
 type Certificate interface {
@@ -72,8 +71,6 @@ func rotateCertificate(nodeName string, owner OWNER, certificateName, certificat
 	switch owner {
 	case kubeadm:
 		err = kubeadmRenewCerts(certificateName, certificatePath)
-	case kubelet:
-		err = kubeletRenewCerts(certificateName, certificatePath)
 	}
 
 	if err != nil {

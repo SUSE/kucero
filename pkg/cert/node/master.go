@@ -22,9 +22,6 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	for k, v := range kubeadmCertificates {
 		certificates[k] = v
 	}
-	for k, v := range kubeletCertificates {
-		certificates[k] = v
-	}
 
 	return &Master{
 		nodeName:           nodeName,
@@ -46,12 +43,6 @@ func (m *Master) CheckExpiration() (map[OWNER][]string, error) {
 		return expiryCertificates, err
 	}
 	expiryCertificates[kubeadm] = kubeadmExpiryCertificates
-
-	kubeletExpiryCertificates, err := kubeletCheckExpiration(m.expiryTimeToRotate, m.clock)
-	if err != nil {
-		return expiryCertificates, err
-	}
-	expiryCertificates[kubelet] = kubeletExpiryCertificates
 
 	return expiryCertificates, nil
 }

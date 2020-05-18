@@ -9,8 +9,9 @@ import (
 // NewNode checks it is master node or worker node
 // then returns the corresponding node certificate interface
 func NewNode(isMasterNode bool, nodeName string, expiryTimeToRotate time.Duration) node.Certificate {
-	if isMasterNode {
-		return node.NewMaster(nodeName, expiryTimeToRotate)
+	if !isMasterNode {
+		return nil
 	}
-	return node.NewWorker(nodeName, expiryTimeToRotate)
+
+	return node.NewMaster(nodeName, expiryTimeToRotate)
 }

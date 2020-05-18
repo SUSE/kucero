@@ -18,7 +18,10 @@ spec:
       serviceAccountName: kucero
       tolerations:
         - key: node-role.kubernetes.io/master
+          operator: Exists
           effect: NoSchedule
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       hostPID: true # Facilitate entering the host mount namespace via init
       restartPolicy: Always
       containers:
