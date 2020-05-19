@@ -33,40 +33,30 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 
 // CheckExpiration checks master node certificate
 // returns the certificates which are going to expires
-func (m *Master) CheckExpiration() (map[OWNER][]string, error) {
-	expiryCertificates := map[OWNER][]string{}
-
+func (m *Master) CheckExpiration() ([]string, error) {
 	logrus.Infof("Commanding check %s node certificate expiration", m.nodeName)
 
-	kubeadmExpiryCertificates, err := kubeadmCheckExpiration(m.expiryTimeToRotate, m.clock)
-	if err != nil {
-		return expiryCertificates, err
-	}
-	expiryCertificates[kubeadm] = kubeadmExpiryCertificates
-
-	return expiryCertificates, nil
+	return kubeadmCheckExpiration(m.expiryTimeToRotate, m.clock)
 }
 
 // Rotate executes the steps to rotates the certificate
 // including backing up certificate, rotates certificate, and restart kubelet
-func (m *Master) Rotate(expiryCertificates map[OWNER][]string) error {
+func (m *Master) Rotate(expiryCertificates []string) error {
 	var errs error
-	for owner, certificates := range expiryCertificates {
-		for _, certificateName := range certificates {
-			certificatePath, ok := m.certificates[certificateName]
-			if !ok {
-				continue
-			}
+	for _, certificateName := range expiryCertificates {
+		certificatePath, ok := m.certificates[certificateName]
+		if !ok {
+			continue
+		}
 
-			if err := backupCertificate(m.nodeName, certificateName, certificatePath); err != nil {
-				errs = fmt.Errorf("%w; ", err)
-				continue
-			}
+		if err := backupCertificate(m.nodeName, certificateName, certificatePath); err != nil {
+			errs = fmt.Errorf("%w; ", err)
+			continue
+		}
 
-			if err := rotateCertificate(m.nodeName, owner, certificateName, certificatePath); err != nil {
-				errs = fmt.Errorf("%w; ", err)
-				continue
-			}
+		if err := rotateCertificate(m.nodeName, certificateName, certificatePath); err != nil {
+			errs = fmt.Errorf("%w; ", err)
+			continue
 		}
 	}
 	if errs != nil {

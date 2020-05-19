@@ -10,20 +10,14 @@ import (
 	"github.com/jenting/kucero/pkg/host"
 )
 
-type OWNER string
-
-const (
-	kubeadm OWNER = "kubeadm"
-)
-
 type Certificate interface {
 	// CheckExpiration checks node certificate
 	// returns the certificates which are going to expires
-	CheckExpiration() (map[OWNER][]string, error)
+	CheckExpiration() ([]string, error)
 
 	// Rotate rotates the node certificates
 	// which are going to expires
-	Rotate(expiryCertificates map[OWNER][]string) error
+	Rotate(expiryCertificates []string) error
 }
 
 // checkCertificateExpiry checks if the time `t` is less than the time duration `expiryTimeToRotate`
@@ -64,15 +58,11 @@ func backupCertificate(nodeName string, certificateName, certificatePath string)
 
 // rotateCertificate calls `kubeadm alpha certs renew <cert-name>`
 // on the host system to rotates kubeadm issued certificates
-func rotateCertificate(nodeName string, owner OWNER, certificateName, certificatePath string) error {
-	logrus.Infof("Commanding rotate %s node owner %s certificate %s path %s", nodeName, string(owner), certificateName, certificatePath)
+func rotateCertificate(nodeName string, certificateName, certificatePath string) error {
+	logrus.Infof("Commanding rotate %s node certificate %s path %s", nodeName, certificateName, certificatePath)
 
 	var err error
-	switch owner {
-	case kubeadm:
-		err = kubeadmRenewCerts(certificateName, certificatePath)
-	}
-
+	err = kubeadmRenewCerts(certificateName, certificatePath)
 	if err != nil {
 		logrus.Errorf("Error invoking command: %v", err)
 	}
