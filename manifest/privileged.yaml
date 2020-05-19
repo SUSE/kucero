@@ -1,3 +1,21 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: kucero
+spec:
+  privileged: true
+  hostPID: true
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+    - secret
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -11,16 +29,20 @@ rules:
 #
 - apiGroups: [""]
   resources: ["nodes"]
-  verbs:     ["get", "patch"]
+  verbs: ["get", "patch"]
 - apiGroups: [""]
   resources: ["pods"]
-  verbs:     ["list","delete","get"]
+  verbs: ["list", "delete", "get"]
 - apiGroups: ["apps"]
   resources: ["daemonsets"]
-  verbs:     ["get"]
+  verbs: ["get"]
 - apiGroups: [""]
   resources: ["pods/eviction"]
-  verbs:     ["create"]
+  verbs: ["create"]
+- apiGroups: ["extensions"]
+  resources: ["podsecuritypolicies"]
+  resourceNames: ["kucero"]
+  verbs: ["use"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -42,10 +64,10 @@ metadata:
   namespace: kube-system
 rules:
 # Allow kucero to lock/unlock itself
-- apiGroups:     ["apps"]
-  resources:     ["daemonsets"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets"]
   resourceNames: ["kucero"]
-  verbs:         ["update"]
+  verbs: ["update"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
