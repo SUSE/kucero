@@ -39,3 +39,7 @@ Flags:
       --lock-annotation string           annotation in which to record locking node (default "caasp.suse.com/kucero-node-lock")
       --polling-period duration          certificate rotation check period (default 1h0m0s)
 ```
+
+## Demo
+
+[![asciicast](https://asciinema.org/a/331662.svg)](https://asciinema.org/a/331662)
