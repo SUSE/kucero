@@ -23,7 +23,7 @@ Golang >= 1.13
 ```
 make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
 make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
-make deploy-manifest
+make deploy-manifest DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
 ```
 
 ## Configuration

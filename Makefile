@@ -53,7 +53,12 @@ docker-push:
 
 # Deploy manifest
 deploy-manifest:
-	kubectl apply -k manifest
+	cd manifest && kustomize edit set image kucero=${DOCKER_IMAGE}
+	kustomize build manifest | kubectl apply -f -
+
+# Destroy manifest
+destroy-manifest:
+	kustomize build manifest | kubectl delete -f -
 
 clean:
 	go clean -x -i ./...
