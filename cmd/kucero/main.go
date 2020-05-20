@@ -35,8 +35,8 @@ func main() {
 
 	rootCmd.PersistentFlags().DurationVar(&pollingPeriod, "polling-period", time.Hour,
 		"certificate rotation check period")
-	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "expiry-time-to-rotate", time.Hour*24*30,
-		"rotates certificate when certificate less than expiry time")
+	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "renew-before", time.Hour*24*30,
+		"rotates certificate before expiry is below")
 
 	rootCmd.PersistentFlags().StringVar(&dsNamespace, "ds-namespace", "kube-system",
 		"namespace containing daemonset on which to place lock")
