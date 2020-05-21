@@ -10,9 +10,9 @@
 
 ## Introduction
 
-Kucero (KUbeadm CErtificate ROtation) is a Kubernetes daemonset that
-performs safe automatic kubeadm certificate rotation when the certificate
-is going to expire within the user specified time period.
+Kucero (KUbernetes CErtificate ROtation) is a Kubernetes daemonset that
+performs safe automatic Kubernetes control plane certificate rotation
+when the certificate rediaul time is below than user configured time period.
 
 ## Requirements
 

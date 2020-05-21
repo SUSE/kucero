@@ -3,7 +3,7 @@ package cert
 import (
 	"time"
 
-	"github.com/jenting/kucero/pkg/cert/node"
+	"github.com/jenting/kucero/pkg/pki/cert/node"
 )
 
 // NewNode checks it is master node or worker node

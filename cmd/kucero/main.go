@@ -5,17 +5,24 @@ import (
 	"os"
 	"time"
 
+	capi "k8s.io/api/certificates/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/weaveworks/kured/pkg/daemonsetlock"
 	"github.com/weaveworks/kured/pkg/delaytick"
 
-	"github.com/jenting/kucero/pkg/cert"
+	"github.com/jenting/kucero/controllers"
+	"github.com/jenting/kucero/pkg/pki/cert"
 	"github.com/jenting/kucero/pkg/host"
+	"github.com/jenting/kucero/pkg/pki/signer"
 )
 
 var (
@@ -24,12 +31,23 @@ var (
 	// Command line flags
 	pollingPeriod, expiryTimeToRotate   time.Duration
 	dsNamespace, dsName, lockAnnotation string
+	metricsAddr                         string
+	leaderElectionID                    string
+	caCertPath, caKeyPath               string
+
+	scheme = runtime.NewScheme()
 )
+
+func init() {
+	_ = capi.AddToScheme(scheme)
+	_ = corev1.AddToScheme(scheme)
+	// +kubebuilder:scaffold:scheme
+}
 
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "kucero",
-		Short: "KUbeadm CErtificate ROtation",
+		Short: "KUbernetes CErtificate ROtation",
 		Run:   root,
 	}
 
@@ -44,6 +62,15 @@ func main() {
 		"name of daemonset on which to place lock")
 	rootCmd.PersistentFlags().StringVar(&lockAnnotation, "lock-annotation", "caasp.suse.com/kucero-node-lock",
 		"annotation in which to record locking node")
+
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", ":8080",
+		"The address the metric endpoint binds to")
+	rootCmd.PersistentFlags().StringVar(&leaderElectionID, "leader-election-id", "kucero-leader-election",
+		"The name of the configmap used to coordinate leader election between kucero-controllers")
+	rootCmd.PersistentFlags().StringVar(&caCertPath, "ca-cert-path", "/etc/kubernetes/pki/ca.crt",
+		"Sign CSR with this certificate file")
+	rootCmd.PersistentFlags().StringVar(&caKeyPath, "ca-key-path", "/etc/kubernetes/pki/ca.key",
+		"Sign CSR with this private key file")
 
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Error(err)
@@ -97,8 +124,39 @@ func rotateCertificateWhenNeeded(nodeName string) {
 
 	certNode := cert.NewNode(isMasterNode, nodeName, expiryTimeToRotate)
 
-	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		Port:               9443,
+		LeaderElection:     true,
+		LeaderElectionID:   leaderElectionID,
+	})
+	if err != nil {
+		logrus.Fatal(err)
+	}
 
+	signer, err := signer.NewSigner(caCertPath, caKeyPath)
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	if err := (&controllers.CertificateSigningRequestSigningReconciler{
+		Client:        mgr.GetClient(),
+		ClientSet:     k8sclient.NewForConfigOrDie(mgr.GetConfig()),
+		Scheme:        mgr.GetScheme(),
+		Signer:        signer,
+		EventRecorder: mgr.GetEventRecorderFor("CSRSigningReconciler"),
+	}).SetupWithManager(mgr); err != nil {
+		logrus.Fatal(err)
+	}
+	// +kubebuilder:scaffold:builder
+
+	logrus.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		logrus.Fatal(err)
+	}
+
+	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
 	nodeMeta := nodeMeta{}
 	if holding(lock, &nodeMeta) {
 		release(lock)
