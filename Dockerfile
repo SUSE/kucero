@@ -5,7 +5,7 @@ COPY . .
 RUN go mod download && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -X main.version=v1.0.0" -o kucero cmd/kucero/*.go
 
-FROM opensuse/leap:15.1
+FROM opensuse/leap:15.2
 RUN zypper --non-interactive install kubernetes-client
 WORKDIR /bin
 COPY --from=build /src/kucero .
