@@ -12,7 +12,7 @@
 
 Kucero (KUbernetes CErtificate ROtation) is a Kubernetes daemonset that
 performs safe automatic Kubernetes control plane certificate rotation
-when the certificate rediaul time is below than user configured time period.
+when the certificate residual time is below than user configured time period.
 
 ## Requirements
 
@@ -32,12 +32,17 @@ The following arguments can be passed to kucero via the daemonset pod template:
 
 ```
 Flags:
-      --ds-name string            name of daemonset on which to place lock (default "kucero")
-      --ds-namespace string       namespace containing daemonset on which to place lock (default "kube-system")
-  -h, --help                      help for kucero
-      --lock-annotation string    annotation in which to record locking node (default "caasp.suse.com/kucero-node-lock")
-      --polling-period duration   certificate rotation check period (default 1h0m0s)
-      --renew-before duration     rotates certificate before expiry is below (default 720h0m0s)
+      --ca-cert-path string         sign CSR with this certificate file (default "/etc/kubernetes/pki/ca.crt")
+      --ca-key-path string          sign CSR with this private key file (default "/etc/kubernetes/pki/ca.key")
+      --ds-name string              name of daemonset on which to place lock (default "kucero")
+      --ds-namespace string         namespace containing daemonset on which to place lock (default "kube-system")
+      --enable-kucero-controller    enable kucero controller (default true)
+  -h, --help                        help for kucero
+      --leader-election-id string   the name of the configmap used to coordinate leader election between kucero-controllers (default "kucero-leader-election")
+      --lock-annotation string      annotation in which to record locking node (default "caasp.suse.com/kucero-node-lock")
+      --metrics-addr string         the address the metric endpoint binds to (default ":8080")
+      --polling-period duration     certificate rotation check period (default 1h0m0s)
+      --renew-before duration       rotates certificate before expiry is below (default 720h0m0s)
 ```
 
 ## Demo
