@@ -76,14 +76,14 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request)
 	}
 	switch {
 	case !csr.DeletionTimestamp.IsZero():
-		logrus.Info("CSR has been deleted. Ignoring.")
+		logrus.Info("CSR has been deleted. Ignoring")
 	case csr.Status.Certificate != nil:
-		logrus.Info("CSR has already been signed. Ignoring.")
+		logrus.Info("CSR has already been signed. Ignoring")
 	default:
-		logrus.Info("Signing.")
+		logrus.Info("Signing")
 		x509cr, err := cert.ParseCSR(csr.Spec.Request)
 		if err != nil {
-			logrus.Errorf("unable to parse csr: %v", err)
+			logrus.Errorf("Unable to parse csr: %v", err)
 			r.EventRecorder.Event(&csr, v1.EventTypeWarning, "SigningFailed", "Unable to parse the CSR request")
 			return ctrl.Result{}, nil
 		}
@@ -98,15 +98,15 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request)
 
 			approved, err := r.authorize(&csr, recognizer.permission)
 			if err != nil {
-				logrus.Errorf("subjectaccessreview failed: %v", err)
-				return ctrl.Result{}, fmt.Errorf("error subjectaccessreview: %v", err)
+				logrus.Errorf("SubjectAccessReview failed: %v", err)
+				return ctrl.Result{}, fmt.Errorf("error SubjectAccessReview: %v", err)
 			}
 
 			if approved {
 				logrus.Infof("CSR: %v", csr.ObjectMeta.Name)
 				logrus.Infof("X509v3 SAN DNS: %v", x509cr.DNSNames)
 				logrus.Infof("X509v3 SAN IP: %v", x509cr.IPAddresses)
-				logrus.Info("approving csr")
+				logrus.Info("Approving csr")
 
 				// sign the csr before approve
 				// otherwise, the kube-controller-manager will sign the csr

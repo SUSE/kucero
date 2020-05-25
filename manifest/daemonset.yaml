@@ -24,10 +24,19 @@ spec:
         node-role.kubernetes.io/master: ""
       hostPID: true # Facilitate entering the host mount namespace via init
       restartPolicy: Always
+      volumes:
+        - name: ca-crt
+          hostPath:
+            path: /etc/kubernetes/pki/ca.crt
+            type: File
+        - name: ca-key
+          hostPath:
+            path: /etc/kubernetes/pki/ca.key
+            type: File
       containers:
         - name: kucero
           image: kucero:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true # Give permission to nsenter /proc/1/ns/mnt
           env:
@@ -39,3 +48,10 @@ spec:
                   fieldPath: spec.nodeName
           command:
             - /bin/kucero
+          volumeMounts:
+            - mountPath: /etc/kubernetes/pki/ca.crt
+              name: ca-crt
+              readOnly: true
+            - mountPath: /etc/kubernetes/pki/ca.key
+              name: ca-key
+              readOnly: true

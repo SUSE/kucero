@@ -68,7 +68,7 @@ func isNodeServingCert(csr *capi.CertificateSigningRequest, x509cr *x509.Certifi
 		return false
 	}
 	if csr.Spec.Username != x509cr.Subject.CommonName {
-		logrus.Warningf("x509 CN %q doesn't match CSR username %q", x509cr.Subject.CommonName, csr.Spec.Username)
+		logrus.Warningf("X509 CN %q doesn't match CSR username %q", x509cr.Subject.CommonName, csr.Spec.Username)
 		return false
 	}
 	return true

@@ -47,6 +47,7 @@ var (
 	// Command line flags
 	pollingPeriod, expiryTimeToRotate   time.Duration
 	dsNamespace, dsName, lockAnnotation string
+	enableKuceroController              bool
 	metricsAddr                         string
 	leaderElectionID                    string
 	caCertPath, caKeyPath               string
@@ -67,11 +68,11 @@ func main() {
 		Run:   root,
 	}
 
+	// kucero-kubeadm
 	rootCmd.PersistentFlags().DurationVar(&pollingPeriod, "polling-period", time.Hour,
 		"certificate rotation check period")
 	rootCmd.PersistentFlags().DurationVar(&expiryTimeToRotate, "renew-before", time.Hour*24*30,
 		"rotates certificate before expiry is below")
-
 	rootCmd.PersistentFlags().StringVar(&dsNamespace, "ds-namespace", "kube-system",
 		"namespace containing daemonset on which to place lock")
 	rootCmd.PersistentFlags().StringVar(&dsName, "ds-name", "kucero",
@@ -79,14 +80,17 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(&lockAnnotation, "lock-annotation", "caasp.suse.com/kucero-node-lock",
 		"annotation in which to record locking node")
 
+	// kucero-controller
+	rootCmd.PersistentFlags().BoolVar(&enableKuceroController, "enable-kucero-controller", true,
+		"enable kucero controller")
 	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", ":8080",
-		"The address the metric endpoint binds to")
+		"the address the metric endpoint binds to")
 	rootCmd.PersistentFlags().StringVar(&leaderElectionID, "leader-election-id", "kucero-leader-election",
-		"The name of the configmap used to coordinate leader election between kucero-controllers")
+		"the name of the configmap used to coordinate leader election between kucero-controllers")
 	rootCmd.PersistentFlags().StringVar(&caCertPath, "ca-cert-path", "/etc/kubernetes/pki/ca.crt",
-		"Sign CSR with this certificate file")
+		"sign CSR with this certificate file")
 	rootCmd.PersistentFlags().StringVar(&caKeyPath, "ca-key-path", "/etc/kubernetes/pki/ca.key",
-		"Sign CSR with this private key file")
+		"sign CSR with this private key file")
 
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Error(err)
@@ -94,7 +98,7 @@ func main() {
 }
 
 func root(cmd *cobra.Command, args []string) {
-	logrus.Infof("KUbeadm CErtificate ROtation Daemon: %s", version)
+	logrus.Infof("KUbernetes CErtificate ROtation Daemon: %s", version)
 
 	nodeName := os.Getenv("KUCERO_NODE_NAME")
 	if nodeName == "" {
@@ -135,41 +139,43 @@ func rotateCertificateWhenNeeded(nodeName string) {
 	_, exist := node.GetLabels()["node-role.kubernetes.io/master"]
 	if !exist {
 		isMasterNode = false
-		logrus.Fatalf("kucero supports running on master node only")
+		logrus.Fatal("Kucero supports running on master node only")
 	}
 
 	certNode := cert.NewNode(isMasterNode, nodeName, expiryTimeToRotate)
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     true,
-		LeaderElectionID:   leaderElectionID,
-	})
-	if err != nil {
-		logrus.Fatal(err)
-	}
+	if enableKuceroController {
+		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+			Scheme:             scheme,
+			MetricsBindAddress: metricsAddr,
+			Port:               9443,
+			LeaderElection:     true,
+			LeaderElectionID:   leaderElectionID,
+		})
+		if err != nil {
+			logrus.Fatal(err)
+		}
 
-	signer, err := signer.NewSigner(caCertPath, caKeyPath)
-	if err != nil {
-		logrus.Fatal(err)
-	}
+		signer, err := signer.NewSigner(caCertPath, caKeyPath)
+		if err != nil {
+			logrus.Fatal(err)
+		}
 
-	if err := (&controllers.CertificateSigningRequestSigningReconciler{
-		Client:        mgr.GetClient(),
-		ClientSet:     k8sclient.NewForConfigOrDie(mgr.GetConfig()),
-		Scheme:        mgr.GetScheme(),
-		Signer:        signer,
-		EventRecorder: mgr.GetEventRecorderFor("CSRSigningReconciler"),
-	}).SetupWithManager(mgr); err != nil {
-		logrus.Fatal(err)
-	}
-	// +kubebuilder:scaffold:builder
+		if err := (&controllers.CertificateSigningRequestSigningReconciler{
+			Client:        mgr.GetClient(),
+			ClientSet:     k8sclient.NewForConfigOrDie(mgr.GetConfig()),
+			Scheme:        mgr.GetScheme(),
+			Signer:        signer,
+			EventRecorder: mgr.GetEventRecorderFor("CSRSigningReconciler"),
+		}).SetupWithManager(mgr); err != nil {
+			logrus.Fatal(err)
+		}
+		// +kubebuilder:scaffold:builder
 
-	logrus.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		logrus.Fatal(err)
+		logrus.Info("Starting manager")
+		if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+			logrus.Fatal(err)
+		}
 	}
 
 	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)

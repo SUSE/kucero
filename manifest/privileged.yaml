@@ -15,34 +15,59 @@ spec:
     rule: RunAsAny
   volumes:
     - secret
+    - hostPath
+  allowedHostPaths:
+    - pathPrefix: /etc/kubernetes/pki
+      readOnly: true
+    - pathPrefix: /var/lib/kubelet/pki
+      readOnly: true
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: kucero
 rules:
-# Allow kucero to read spec.unschedulable
-# Allow kubectl to drain/uncordon
-#
-# NB: These permissions are tightly coupled to the bundled version of kubectl; the ones below
-# match https://github.com/kubernetes/kubernetes/blob/v1.12.1/pkg/kubectl/cmd/drain.go
-#
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "patch"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["list", "delete", "get"]
-- apiGroups: ["apps"]
-  resources: ["daemonsets"]
-  verbs: ["get"]
-- apiGroups: [""]
-  resources: ["pods/eviction"]
-  verbs: ["create"]
-- apiGroups: ["extensions"]
-  resources: ["podsecuritypolicies"]
-  resourceNames: ["kucero"]
-  verbs: ["use"]
+  # Allow kucero to read spec.unschedulable
+  # Allow kubectl to drain/uncordon
+  #
+  # NB: These permissions are tightly coupled to the bundled version of kubectl; the ones below
+  # match https://github.com/kubernetes/kubernetes/blob/v1.12.1/pkg/kubectl/cmd/drain.go
+  #
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "delete", "get"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods/eviction"]
+    verbs: ["create"]
+  - apiGroups: ["extensions"]
+    resources: ["podsecuritypolicies"]
+    resourceNames: ["kucero"]
+    verbs: ["use"]
+  - apiGroups: ["certificates.k8s.io"]
+    resources: ["signers"]
+    resourceNames: ["kubernetes.io/kubelet-serving"]
+    verbs: ["approve", "sign"]
+  - apiGroups: ["certificates.k8s.io"]
+    resources: ["certificatesigningrequests"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["certificates.k8s.io"]
+    resources: ["certificatesigningrequests/approval"]
+    verbs: ["create", "update"]
+  - apiGroups: ["certificates.k8s.io"]
+    resources: ["certificatesigningrequests/status"]
+    verbs: ["patch"]
+  - apiGroups: ["authorization.k8s.io"]
+    resources: ["subjectaccessreviews"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -53,9 +78,9 @@ roleRef:
   kind: ClusterRole
   name: kucero
 subjects:
-- kind: ServiceAccount
-  name: kucero
-  namespace: kube-system
+  - kind: ServiceAccount
+    name: kucero
+    namespace: kube-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -63,11 +88,21 @@ metadata:
   name: kucero
   namespace: kube-system
 rules:
-# Allow kucero to lock/unlock itself
-- apiGroups: ["apps"]
-  resources: ["daemonsets"]
-  resourceNames: ["kucero"]
-  verbs: ["update"]
+  # Allow kucero to lock/unlock itself
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    resourceNames: ["kucero"]
+    verbs: ["update"]
+  # Allow kucero to access configmap
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -75,9 +110,9 @@ metadata:
   name: kucero
   namespace: kube-system
 subjects:
-- kind: ServiceAccount
-  namespace: kube-system
-  name: kucero
+  - kind: ServiceAccount
+    namespace: kube-system
+    name: kucero
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
