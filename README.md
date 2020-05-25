@@ -1,4 +1,4 @@
-![Build Status](https://github.com/jenting/kucero/workflows/Build%20Status/badge.svg?branch=master)
+![Build Status](https://github.com/jenting/kucero/workflows/Build%20Status/badge.svg)
 
 ```
  _
@@ -22,7 +22,7 @@ Golang >= 1.13
 
 ```
 make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
-make docker-build DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
+make docker-push DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
 make deploy-manifest DOCKER_IMAGE=<YOUR-DOCKER-REPOSITORY-IMAGE-NAME-TAG>
 ```
 

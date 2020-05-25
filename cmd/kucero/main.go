@@ -94,7 +94,7 @@ func main() {
 }
 
 func root(cmd *cobra.Command, args []string) {
-	logrus.Infof("KUbernetes CErtificate ROtation Daemon: %s", version)
+	logrus.Infof("KUbeadm CErtificate ROtation Daemon: %s", version)
 
 	nodeName := os.Getenv("KUCERO_NODE_NAME")
 	if nodeName == "" {
