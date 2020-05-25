@@ -9,9 +9,9 @@ SHELL := bash
 VERSION ?= $(shell git describe --tags --dirty --always)
 
 # Docker image name parameters
-DOCKER_NAME ?= jenting/kucero
-DOCKER_TAG ?= ${VERSION}
-DOCKER_IMAGE ?= ${DOCKER_NAME}:${DOCKER_TAG}
+IMG_NAME ?= jenting/kucero
+IMG_TAG ?= ${VERSION}
+IMG ?= ${IMG_NAME}:${IMG_TAG}
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -45,15 +45,15 @@ vet:
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${DOCKER_IMAGE}
+	docker build . -t ${IMG}
 
 # Push the docker image
 docker-push:
-	docker push ${DOCKER_IMAGE}
+	docker push ${IMG}
 
 # Deploy manifest
 deploy-manifest:
-	cd manifest && kustomize edit set image kucero=${DOCKER_IMAGE}
+	cd manifest && kustomize edit set image kucero=${IMG}
 	kustomize build manifest | kubectl apply -f -
 
 # Destroy manifest
