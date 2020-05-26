@@ -1,4 +1,5 @@
-![Build Status](https://github.com/jenting/kucero/workflows/Build%20Status/badge.svg)
+![CI](https://github.com/jenting/kucero/workflows/CI/badge.svg)
+![CD](https://github.com/jenting/kucero/workflows/CD/badge.svg)
 
 ```
  _
@@ -11,12 +12,21 @@
 ## Introduction
 
 Kucero (KUbernetes CErtificate ROtation) is a Kubernetes daemonset that
-performs safe automatic Kubernetes control plane certificate rotation
-when the certificate residual time is below than user configured time period.
+performs _automatic_ Kubernetes control plane certificate rotation.
 
-## Requirements
+Kucero takes care both:
+- kubeadm-managed certificates and kubeconfigs: kucero periodically watches the kubeadm generated certificates and kubeconfigs on host system, and renews certificates/kubeconfigs when the certificates/kubeconfigs residual time is below than user configured time period.
+- kubelet server CSR: kucero controller watches kubelet server CSR, and then auto signs and approves kubelet server certificates with user-specified CA cert/key pair.
 
-Golang >= 1.13
+## Kubelet Configuration
+
+To enable kubelet server TLS bootstrapping, you need to set `serverTLSBootstrap: true` in kubelet configuration file `/var/lib/kubelet/config.yaml`. This will enable kubelet to generates kubelet server CSR.
+
+## Build Requirements
+
+- Golang >= 1.13
+- Docker
+- Kustomize
 
 ## Installation
 
@@ -45,6 +55,11 @@ Flags:
       --renew-before duration       rotates certificate before expiry is below (default 720h0m0s)
 ```
 
+##
+
 ## Demo
 
-[![asciicast](https://asciinema.org/a/331662.svg)](https://asciinema.org/a/331662)
+- kubeadm
+  [![asciicast](https://asciinema.org/a/331662.svg)](https://asciinema.org/a/331662)
+- kubelet
+  [![asciicast](https://asciinema.org/a/331652.svg)](https://asciinema.org/a/331652)
