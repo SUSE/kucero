@@ -2,9 +2,6 @@ name: CD
 
 on:
   release:
-  push:
-    branches:
-      - master
 
 jobs:
   build-and-push-docker-image:
