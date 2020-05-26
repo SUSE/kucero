@@ -1,0 +1,16 @@
+name: CD
+
+on:
+  release:
+
+jobs:
+  build-and-push-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+
+      - name: Build, Tag, Publish Docker Images to GitHub Package Registry
+        uses: matootie/github-docker@v2.2.3
+        with:
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
