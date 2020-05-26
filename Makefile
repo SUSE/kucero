@@ -45,7 +45,7 @@ vet:
 
 # Build the docker image
 docker-build: test
-	docker build . -t ${IMG}
+	docker build --build-arg VERSION=${VERSION} -t ${IMG} .
 
 # Push the docker image
 docker-push:
