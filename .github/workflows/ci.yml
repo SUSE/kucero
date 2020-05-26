@@ -29,13 +29,13 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Docker build
-        run: make docker-build IMG=jenting/kucero:${GITHUB_HEAD_REF}
+        run: make docker-build IMG=jenting/kucero:${GITHUB_REF##*/}
 
       - name: Set up KIND cluster
         uses: engineerd/setup-kind@v0.4.0
 
       - name: Load local image into KIND cluster
-        run: kind load docker-image jenting/kucero:${GITHUB_HEAD_REF}
+        run: kind load docker-image jenting/kucero:${GITHUB_REF##*/}
 
       - name: Install kustomize
         run: |
@@ -45,5 +45,5 @@ jobs:
       - name: Test
         run: |
           kubectl cluster-info
-          make deploy-manifest IMG=jenting/kucero:${GITHUB_HEAD_REF}
+          make deploy-manifest IMG=jenting/kucero:${GITHUB_REF##*/}
           kubectl wait pods --for=condition=ready -n kube-system --all --timeout=3m
