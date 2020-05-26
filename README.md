@@ -28,6 +28,10 @@ To enable kubelet server TLS bootstrapping, you need to set `serverTLSBootstrap:
 - Docker
 - Kustomize
 
+## Kubeadm Compatibility
+
+- kubeadm >= 1.15.0
+
 ## Installation
 
 ```
