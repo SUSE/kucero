@@ -1,9 +1,3 @@
 resources:
 - privileged.yaml
 - daemonset.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-images:
-- name: kucero
-  newName: jenting/kucero
-  newTag: v1.0.0
