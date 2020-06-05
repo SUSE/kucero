@@ -1,13 +1,7 @@
 ![CI](https://github.com/jenting/kucero/workflows/CI/badge.svg)
 ![CD](https://github.com/jenting/kucero/workflows/CD/badge.svg)
 
-```
- _
-| | ___   _  ___ ___ _ __ ___
-| |/ / | | |/ __/ _ \ '__/ _ \
-|   <| |_| | (_|  __/ | | (_) |
-|_|\_\\__,_|\___\___|_|  \___/
-```
+![kucero](logo.png)
 
 ## Introduction
 
