@@ -1,5 +1,4 @@
-![CI](https://github.com/jenting/kucero/workflows/CI/badge.svg)
-![CD](https://github.com/jenting/kucero/workflows/CD/badge.svg)
+![CI](https://github.com/SUSE/kucero/workflows/CI/badge.svg)
 
 ![kucero](logo.png)
 
