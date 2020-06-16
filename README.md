@@ -58,6 +58,6 @@ Flags:
 ## Demo
 
 - kubeadm
-  [![asciicast](https://asciinema.org/a/331662.svg)](https://asciinema.org/a/331662)
+  [![asciicast](https://asciinema.org/a/340053.svg)](https://asciinema.org/a/340053)
 - kubelet
-  [![asciicast](https://asciinema.org/a/331652.svg)](https://asciinema.org/a/331652)
+  [![asciicast](https://asciinema.org/a/340054.svg)](https://asciinema.org/a/340054)
