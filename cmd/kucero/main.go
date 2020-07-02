@@ -46,13 +46,13 @@ var (
 	version = "unreleased"
 
 	// Command line flags
-	apiServerHost, kubeconfig           string
-	pollingPeriod, expiryTimeToRotate   time.Duration
-	dsNamespace, dsName, lockAnnotation string
-	enableKubeletCSRController          bool
-	metricsAddr                         string
-	leaderElectionID                    string
-	caCertPath, caKeyPath               string
+	apiServerHost, kubeconfig                   string
+	pollingPeriod, expiryTimeToRotate, duration time.Duration
+	dsNamespace, dsName, lockAnnotation         string
+	enableKubeletCSRController                  bool
+	metricsAddr                                 string
+	leaderElectionID                            string
+	caCertPath, caKeyPath                       string
 
 	scheme = runtime.NewScheme()
 )
@@ -99,6 +99,8 @@ func main() {
 		"To sign CSR with this certificate file")
 	rootCmd.PersistentFlags().StringVar(&caKeyPath, "ca-key-path", "/etc/kubernetes/pki/ca.key",
 		"To sign CSR with this private key file")
+	rootCmd.PersistentFlags().DurationVar(&duration, "duration", time.Hour*24*365,
+		"Kubelet certificate duration")
 
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Error(err)
@@ -182,7 +184,7 @@ func rotateCertificateWhenNeeded(nodeName string) {
 				logrus.Fatal(err)
 			}
 
-			signer, err := signer.NewSigner(caCertPath, caKeyPath)
+			signer, err := signer.NewSigner(caCertPath, caKeyPath, duration)
 			if err != nil {
 				logrus.Fatal(err)
 			}
