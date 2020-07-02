@@ -47,7 +47,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           command:
-            - /bin/kucero
+            - /usr/bin/kucero
           volumeMounts:
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: ca-crt

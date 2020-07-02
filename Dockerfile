@@ -9,6 +9,6 @@ RUN go mod download && \
 
 FROM opensuse/leap:15.2
 RUN zypper --non-interactive install kubernetes-client
-WORKDIR /bin
+WORKDIR /usr/bin
 COPY --from=build /src/kucero .
-ENTRYPOINT ["/bin/kucero"]
+ENTRYPOINT ["/usr/bin/kucero"]
