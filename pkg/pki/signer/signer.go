@@ -32,7 +32,7 @@ type Signer struct {
 	certTTL    time.Duration
 }
 
-func NewSigner(caFile, caKeyFile string) (*Signer, error) {
+func NewSigner(caFile, caKeyFile string, duration time.Duration) (*Signer, error) {
 	caProvider, err := newCAProvider(caFile, caKeyFile)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func NewSigner(caFile, caKeyFile string) (*Signer, error) {
 
 	ret := &Signer{
 		caProvider: caProvider,
-		certTTL:    time.Hour * 24 * 365,
+		certTTL:    duration,
 	}
 	return ret, nil
 }
