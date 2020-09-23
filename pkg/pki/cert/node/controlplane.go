@@ -25,21 +25,21 @@ import (
 	"github.com/jenting/kucero/pkg/host"
 )
 
-type Master struct {
+type ControlPlane struct {
 	nodeName           string
 	expiryTimeToRotate time.Duration
 	clock              Clock
 	certificates       map[string]string
 }
 
-// NewMaster returns a master node certificate interface
-func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
-	certificates := make(map[string]string, 0)
+// NewControlPlaneNode returns a control plane node certificate interface
+func NewControlPlaneNode(nodeName string, expiryTimeToRotate time.Duration) Certificate {
+	certificates := make(map[string]string)
 	for k, v := range kubeadmCertificates {
 		certificates[k] = v
 	}
 
-	return &Master{
+	return &ControlPlane{
 		nodeName:           nodeName,
 		expiryTimeToRotate: expiryTimeToRotate,
 		clock:              NewRealClock(),
@@ -47,9 +47,9 @@ func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
 	}
 }
 
-// CheckExpiration checks master node certificate
+// CheckExpiration checks control plane node certificate
 // returns the certificates which are going to expires
-func (m *Master) CheckExpiration() ([]string, error) {
+func (m *ControlPlane) CheckExpiration() ([]string, error) {
 	logrus.Infof("Commanding check %s node certificate expiration", m.nodeName)
 
 	return kubeadmCheckExpiration(m.expiryTimeToRotate, m.clock)
@@ -57,7 +57,7 @@ func (m *Master) CheckExpiration() ([]string, error) {
 
 // Rotate executes the steps to rotates the certificate
 // including backing up certificate, rotates certificate, and restart kubelet
-func (m *Master) Rotate(expiryCertificates []string) error {
+func (m *ControlPlane) Rotate(expiryCertificates []string) error {
 	var errs error
 	for _, certificateName := range expiryCertificates {
 		certificatePath, ok := m.certificates[certificateName]

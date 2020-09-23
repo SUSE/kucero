@@ -68,7 +68,7 @@ func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]st
 // parseKubeadmCertsCheckExpiration processes the `kubeadm alpha certs check-expiration`
 // output and returns the certificate and expires information
 func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
-	certExpires := make(map[string]time.Time, 0)
+	certExpires := make(map[string]time.Time)
 
 	r := regexp.MustCompile("(.*) ([a-zA-Z]+ [0-9]{1,2}, [0-9]{4} [0-9]{1,2}:[0-9]{2} [a-zA-Z]+) (.*)")
 	lines := strings.Split(input, "\n")

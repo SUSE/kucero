@@ -155,14 +155,14 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		logrus.Fatal(err)
 	}
 
-	isMasterNode := true
+	isControlPlaneNode := true
 	_, exist := node.GetLabels()["node-role.kubernetes.io/master"]
 	if !exist {
-		isMasterNode = false
-		logrus.Fatal("Kucero supports running on master node only")
+		isControlPlaneNode = false
+		logrus.Fatal("Kucero supports running on control plane node only")
 	}
 
-	certNode := cert.NewNode(isMasterNode, nodeName, expiryTimeToRotate)
+	certNode := cert.NewNode(isControlPlaneNode, nodeName, expiryTimeToRotate)
 
 	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
 	nodeMeta := nodeMeta{}
