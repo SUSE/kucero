@@ -34,7 +34,7 @@ type Master struct {
 
 // NewMaster returns a master node certificate interface
 func NewMaster(nodeName string, expiryTimeToRotate time.Duration) Certificate {
-	certificates := make(map[string]string, 0)
+	certificates := make(map[string]string)
 	for k, v := range kubeadmCertificates {
 		certificates[k] = v
 	}

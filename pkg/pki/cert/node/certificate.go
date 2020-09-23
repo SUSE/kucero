@@ -77,8 +77,7 @@ func backupCertificate(nodeName string, certificateName, certificatePath string)
 func rotateCertificate(nodeName string, certificateName, certificatePath string) error {
 	logrus.Infof("Commanding rotate %s node certificate %s path %s", nodeName, certificateName, certificatePath)
 
-	var err error
-	err = kubeadmRenewCerts(certificateName, certificatePath)
+	err := kubeadmRenewCerts(certificateName, certificatePath)
 	if err != nil {
 		logrus.Errorf("Error invoking command: %v", err)
 	}
