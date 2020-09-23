@@ -20,11 +20,13 @@ spec:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
       hostPID: true # Facilitate entering the host mount namespace via init
       restartPolicy: Always
       volumes:
+        - name: kubelet-conf
+          hostPath:
+            path: /etc/kubernetes/kubelet.conf
+            type: File
         - name: ca-crt
           hostPath:
             path: /etc/kubernetes/pki/ca.crt
@@ -32,6 +34,10 @@ spec:
         - name: ca-key
           hostPath:
             path: /etc/kubernetes/pki/ca.key
+            type: FileOrCreate
+        - name: kubelet-config-yaml
+          hostPath:
+            path: /var/lib/kubelet/config.yaml
             type: File
       containers:
         - name: kucero
@@ -49,9 +55,13 @@ spec:
           command:
             - /usr/bin/kucero
           volumeMounts:
+            - mountPath: /etc/kubernetes/kubelet.conf
+              name: kubelet-conf
             - mountPath: /etc/kubernetes/pki/ca.crt
               name: ca-crt
               readOnly: true
             - mountPath: /etc/kubernetes/pki/ca.key
               name: ca-key
               readOnly: true
+            - mountPath: /var/lib/kubelet/config.yaml
+              name: kubelet-config-yaml

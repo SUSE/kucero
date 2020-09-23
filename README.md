@@ -8,18 +8,28 @@ Kucero (KUbernetes CErtificate ROtation) is a Kubernetes daemonset that
 performs _automatic_ Kubernetes control plane certificate rotation.
 
 Kucero takes care both:
-- kubeadm-managed certificates and kubeconfigs: kucero periodically watches the kubeadm generated certificates and kubeconfigs on host system, and renews certificates/kubeconfigs when the certificates/kubeconfigs residual time is below than user configured time period.
-- kubelet server CSR: kucero controller watches kubelet server CSR, and then auto signs and approves kubelet server certificates with user-specified CA cert/key pair.
+- kubeadm certificates and kubeconfigs: kucero periodically watches the kubeadm generated certificates and kubeconfigs on host system, and renews certificates/kubeconfigs when the certificates/kubeconfigs residual time is below than user configured time period.
+- kubelet certificates:
+  - kubelet.conf: kucero helps on auto-update the `/etc/kubernetes/kubelet.conf` from embedded base64 encoded client cert/key to using the local file `/var/lib/kubelet/kubelet-client-current.pem` (this is a bug if you bootstrap a cluster with kubeadm version < 1.17).
+  - client certificate: kucero helps on configuring `rotateCertificates: true` or `rotateCertificates: false` in `/var/lib/kubelet/config.yaml` which controls to auto rotates the kubelet client certificate or not. When configures `rotateCertificates: true`, the kubelet sends out the client CSR at approximately 70%-90% of the total lifetime of the certificate, then the kube-controler-manager watches kubelet client CSR, and then auto signs and approves kubelet client certificates with Kubernetes cluster CA cert/key pair.
+  - server certificate: kucero helps on configuring `serverTLSBootstrap: true` or `serverTLSBootstrap: false` in `/var/lib/kubelet/config.yaml` which controls to auto rotates the kubelet server certificate or not. When configures `serverTLSBootstrap: true`, the kubelet sends out the server CSR at approximately 70%-90% of the total lifetime of the certificate, then the kucero controller watches kubelet server CSR, and then auto signs and approves kubelet server certificates with user-specified CA cert/key pair.
 
 ## Kubelet Configuration
 
-To enable kubelet server TLS bootstrapping, you need to set `serverTLSBootstrap: true` in kubelet configuration file `/var/lib/kubelet/config.yaml`. This will enable kubelet to generates kubelet server CSR.
+By default, kucero enables kubelet client `rotateCertificates: true` and server certificates `serverTLSBootstrap: true` auto rotation, you could disable it by passing flags to kucero:
+- `--enable-kubelet-client-cert-rotation=false`
+- `--enable-kubelet-server-cert-rotation=false`
 
 ## Build Requirements
 
 - Golang >= 1.13
 - Docker
 - Kustomize
+
+## Container Requirement Package
+
+- /usr/bin/kubectl
+- /usr/bin/nsenter
 
 ## Kubeadm Compatibility
 
@@ -52,7 +62,11 @@ Flags:
       --renew-before duration       rotates certificate before expiry is below (default 720h0m0s)
 ```
 
-##
+## Uninstallation
+
+```
+make destroy-manifest
+```
 
 ## Demo
 
