@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package node
+package kubeadm
 
 import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/jenting/kucero/pkg/pki/clock"
 )
 
 func Test_parseKubeadmCertsCheckExpiration(t *testing.T) {
@@ -97,9 +99,60 @@ front-proxy-ca          Mar 11, 2030 01:51 UTC   9y              no
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseKubeadmCertsCheckExpiration(tt.input)
+			got := parsekubeadmAlphaCertsCheckExpiration(tt.input)
 			if !reflect.DeepEqual(got, tt.expect) {
 				t.Errorf("got %v is not equals to expected", got)
+			}
+		})
+	}
+}
+
+type stubClock struct {
+}
+
+func newStubClock() clock.Clock {
+	return &stubClock{}
+}
+
+func (s *stubClock) Now() time.Time {
+	return time.Date(2000, time.January, 02, 03, 04, 05, 06, time.UTC)
+}
+
+func Test_checkExpiry(t *testing.T) {
+	stubClock := newStubClock()
+
+	tests := []struct {
+		name                    string
+		inputT                  time.Time
+		inputExpiryTimeToRotate time.Duration
+		expect                  bool
+	}{
+		{
+			name:                    "expired certificate",
+			inputT:                  time.Date(1960, time.May, 12, 02, 29, 00, 00, time.UTC),
+			inputExpiryTimeToRotate: time.Minute,
+			expect:                  true,
+		},
+		{
+			name:                    "going to expire certificate",
+			inputT:                  time.Date(2000, time.January, 02, 03, 05, 05, 06, time.UTC),
+			inputExpiryTimeToRotate: time.Minute,
+			expect:                  true,
+		},
+		{
+			name:                    "still valid certificate",
+			inputT:                  time.Date(2100, time.May, 12, 02, 29, 00, 00, time.UTC),
+			inputExpiryTimeToRotate: time.Minute,
+			expect:                  false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got := checkCertificateExpiry(tt.name, tt.inputT, tt.inputExpiryTimeToRotate, stubClock)
+			if !reflect.DeepEqual(got, tt.expect) {
+				t.Errorf("got %t is not equals to expected %t", got, tt.expect)
 			}
 		})
 	}

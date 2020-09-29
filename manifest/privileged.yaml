@@ -17,8 +17,10 @@ spec:
     - secret
     - hostPath
   allowedHostPaths:
+    - pathPrefix: /etc/kubernetes
     - pathPrefix: /etc/kubernetes/pki
       readOnly: true
+    - pathPrefix: /var/lib/kubelet
     - pathPrefix: /var/lib/kubelet/pki
       readOnly: true
 ---

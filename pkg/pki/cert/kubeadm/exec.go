@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package node
+package kubeadm
 
 import (
 	"fmt"
@@ -25,24 +25,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jenting/kucero/pkg/host"
+	"github.com/jenting/kucero/pkg/pki/clock"
 )
 
-var kubeadmCertificates map[string]string = map[string]string{
-	"admin.conf":               "/etc/kubernetes/admin.conf",
-	"controller-manager.conf":  "/etc/kubernetes/controller-manager.conf",
-	"scheduler.conf":           "/etc/kubernetes/scheduler.conf",
-	"apiserver":                "/etc/kubernetes/pki/apiserver.crt",
-	"apiserver-etcd-client":    "/etc/kubernetes/pki/apiserver-etcd-client.crt",
-	"apiserver-kubelet-client": "/etc/kubernetes/pki/apiserver-kubelet-client.crt",
-	"front-proxy-client":       "/etc/kubernetes/pki/front-proxy-client.crt",
-	"etcd-healthcheck-client":  "/etc/kubernetes/pki/etcd/healthcheck-client.crt",
-	"etcd-peer":                "/etc/kubernetes/pki/etcd/peer.crt",
-	"etcd-server":              "/etc/kubernetes/pki/etcd/server.crt",
-}
-
-// kubeadmCheckExpiration executes `kubeadm alpha certs check-expiration`
+// kubeadmAlphaCertsCheckExpiration executes `kubeadm alpha certs check-expiration`
 // returns the certificates which are going to expires
-func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]string, error) {
+func kubeadmAlphaCertsCheckExpiration(expiryTimeToRotate time.Duration, clock clock.Clock) ([]string, error) {
 	expiryCertificates := []string{}
 
 	// Relies on hostPID:true and privileged:true to enter host mount space
@@ -54,7 +42,7 @@ func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]st
 	}
 
 	stdoutS := string(stdout)
-	kv := parseKubeadmCertsCheckExpiration(stdoutS)
+	kv := parsekubeadmAlphaCertsCheckExpiration(stdoutS)
 	for cert, t := range kv {
 		expiry := checkCertificateExpiry(cert, t, expiryTimeToRotate, clock)
 		if expiry {
@@ -65,9 +53,15 @@ func kubeadmCheckExpiration(expiryTimeToRotate time.Duration, clock Clock) ([]st
 	return expiryCertificates, nil
 }
 
-// parseKubeadmCertsCheckExpiration processes the `kubeadm alpha certs check-expiration`
+func kubeadmAlphaCertsRenew(certificateName, certificatePath string) error {
+	// Relies on hostPID:true and privileged:true to enter host mount space
+	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certificateName)
+	return cmd.Run()
+}
+
+// parsekubeadmAlphaCertsCheckExpiration processes the `kubeadm alpha certs check-expiration`
 // output and returns the certificate and expires information
-func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
+func parsekubeadmAlphaCertsCheckExpiration(input string) map[string]time.Time {
 	certExpires := make(map[string]time.Time)
 
 	r := regexp.MustCompile("(.*) ([a-zA-Z]+ [0-9]{1,2}, [0-9]{4} [0-9]{1,2}:[0-9]{2} [a-zA-Z]+) (.*)")
@@ -98,8 +92,17 @@ func parseKubeadmCertsCheckExpiration(input string) map[string]time.Time {
 	return certExpires
 }
 
-func kubeadmRenewCerts(certificateName, certificatePath string) error {
-	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certificateName)
-	return cmd.Run()
+// checkCertificateExpiry checks if the time `t` is less than the time duration `expiryTimeToRotate`
+func checkCertificateExpiry(name string, t time.Time, expiryTimeToRotate time.Duration, clock clock.Clock) bool {
+	tn := clock.Now()
+	if t.Before(tn) {
+		logrus.Infof("The certificate %s is expiry already", name)
+		return true
+	} else if t.Sub(tn) <= expiryTimeToRotate {
+		logrus.Infof("The certificate %s notAfter is less than user specified expiry time %s", name, expiryTimeToRotate)
+		return true
+	}
+
+	logrus.Infof("The certificate %s is still valid for %s", name, t.Sub(tn))
+	return false
 }

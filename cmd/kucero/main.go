@@ -38,7 +38,7 @@ import (
 
 	"github.com/jenting/kucero/controllers"
 	"github.com/jenting/kucero/pkg/host"
-	"github.com/jenting/kucero/pkg/pki/cert"
+	"github.com/jenting/kucero/pkg/pki/node"
 	"github.com/jenting/kucero/pkg/pki/signer"
 )
 
@@ -53,6 +53,8 @@ var (
 	metricsAddr                                 string
 	leaderElectionID                            string
 	caCertPath, caKeyPath                       string
+	enableKubeletClientCertRotation             bool
+	enableKubeletServerCertRotation             bool
 
 	scheme = runtime.NewScheme()
 )
@@ -102,6 +104,12 @@ func main() {
 	rootCmd.PersistentFlags().DurationVar(&duration, "duration", time.Hour*24*365,
 		"Kubelet certificate duration")
 
+	// kubelet configuration
+	rootCmd.PersistentFlags().BoolVar(&enableKubeletClientCertRotation, "enable-kubelet-client-cert-rotation", true,
+		"Enable kubelet client cert rotation")
+	rootCmd.PersistentFlags().BoolVar(&enableKubeletServerCertRotation, "enable-kubelet-server-cert-rotation", true,
+		"Enable kubelet server cert rotation")
+
 	if err := rootCmd.Execute(); err != nil {
 		logrus.Error(err)
 	}
@@ -120,26 +128,7 @@ func root(cmd *cobra.Command, args []string) {
 	extra := rand.Intn(int(pollingPeriod.Seconds()))
 	pollingPeriod = pollingPeriod + time.Duration(extra)*time.Second
 
-	logrus.Infof("Node Name: %s", nodeName)
-	logrus.Infof("Lock Annotation: %s/%s:%s", dsNamespace, dsName, lockAnnotation)
-	logrus.Infof("Shifted Certificate Check Polling Period %v", pollingPeriod)
-	logrus.Infof("Rotates Certificate If Expiry Time Less Than %v", expiryTimeToRotate)
-	if enableKubeletCSRController {
-		logrus.Infof("Leader election ID: %s", leaderElectionID)
-		logrus.Infof("CA cert: %s", caCertPath)
-		logrus.Infof("CA key: %s", caKeyPath)
-	}
-
-	rotateCertificateWhenNeeded(nodeName)
-}
-
-// nodeMeta is used to remember information across nodes
-// whom is doing certificate rotation
-type nodeMeta struct {
-	Unschedulable bool `json:"unschedulable"`
-}
-
-func rotateCertificateWhenNeeded(nodeName string) {
+	// check it's a control plane node or worker node
 	config, err := clientcmd.BuildConfigFromFlags(apiServerHost, kubeconfig)
 	if err != nil {
 		logrus.Fatal(err)
@@ -150,19 +139,40 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		logrus.Fatal(err)
 	}
 
-	node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+	corev1Node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
 	isControlPlaneNode := true
-	_, exist := node.GetLabels()["node-role.kubernetes.io/master"]
+	_, exist := corev1Node.GetLabels()["node-role.kubernetes.io/master"]
 	if !exist {
 		isControlPlaneNode = false
-		logrus.Fatal("Kucero supports running on control plane node only")
 	}
 
-	certNode := cert.NewNode(isControlPlaneNode, nodeName, expiryTimeToRotate)
+	logrus.Infof("Node Name: %s", nodeName)
+	logrus.Infof("Lock Annotation: %s/%s:%s", dsNamespace, dsName, lockAnnotation)
+	logrus.Infof("Shifted Certificate Check Polling Period %v", pollingPeriod)
+	logrus.Infof("Rotates Certificate If Expiry Time Less Than %v", expiryTimeToRotate)
+	logrus.Infof("Kubelet client cert rotation enabled: %t", enableKubeletClientCertRotation)
+	logrus.Infof("Kubelet server cert rotation enabled: %t", enableKubeletServerCertRotation)
+	if enableKubeletCSRController && isControlPlaneNode {
+		logrus.Infof("Kubelet CSR controller leader election ID: %s", leaderElectionID)
+		logrus.Infof("Kubelet CSR controller CA cert: %s", caCertPath)
+		logrus.Infof("Kubelet CSR controller CA key: %s", caKeyPath)
+	}
+
+	rotateCertificateWhenNeeded(nodeName, isControlPlaneNode, client)
+}
+
+// nodeMeta is used to remember information across nodes
+// whom is doing certificate rotation
+type nodeMeta struct {
+	Unschedulable bool `json:"unschedulable"`
+}
+
+func rotateCertificateWhenNeeded(nodeName string, isControlPlaneNode bool, client *kubernetes.Clientset) {
+	certNode := node.New(isControlPlaneNode, nodeName, expiryTimeToRotate, enableKubeletClientCertRotation, enableKubeletServerCertRotation)
 
 	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
 	nodeMeta := nodeMeta{}
@@ -170,7 +180,7 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		release(lock)
 	}
 
-	if enableKubeletCSRController {
+	if enableKubeletCSRController && isControlPlaneNode {
 		go func() {
 			mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 				Scheme:                  scheme,
@@ -219,6 +229,12 @@ func rotateCertificateWhenNeeded(nodeName string) {
 		case <-ch:
 			logrus.Info("Check certificate expiration")
 
+			// check the configuration needs to be update
+			configsToBeUpdate, err := certNode.CheckConfig()
+			if err != nil {
+				logrus.Error(err)
+			}
+
 			// check the certificate needs expiration
 			expiryCerts, err := certNode.CheckExpiration()
 			if err != nil {
@@ -229,22 +245,34 @@ func rotateCertificateWhenNeeded(nodeName string) {
 			// and the lock can be acquired.
 			// if the lock cannot be acquired, it will wait `pollingPeriod` time
 			// and try to acquire the lock again.
-			if len(expiryCerts) > 0 && acquire(lock, &nodeMeta) {
-				logrus.Infof("The expiry certificiates are %v", expiryCerts)
-
+			if (len(configsToBeUpdate) > 0 || len(expiryCerts) > 0) && acquire(lock, &nodeMeta) {
 				if !nodeMeta.Unschedulable {
-					host.Cordon(nodeName)
-					host.Drain(nodeName)
+					_ = host.Cordon(nodeName)
+					_ = host.Drain(nodeName)
 				}
 
-				logrus.Info("Waiting for certificate rotation")
-				if err := certNode.Rotate(expiryCerts); err != nil {
-					logrus.Error(err)
+				if len(configsToBeUpdate) > 0 {
+					logrus.Infof("The configuration need to be updates are %v", configsToBeUpdate)
+
+					logrus.Info("Waiting for configuration to be update")
+					if err := certNode.UpdateConfig(configsToBeUpdate); err != nil {
+						logrus.Error(err)
+					}
+					logrus.Info("Update configuration done")
 				}
-				logrus.Info("Certificate rotation done")
+
+				if len(expiryCerts) > 0 {
+					logrus.Infof("The expiry certificiates are %v", expiryCerts)
+
+					logrus.Info("Waiting for certificate rotation")
+					if err := certNode.Rotate(expiryCerts); err != nil {
+						logrus.Error(err)
+					}
+					logrus.Info("Certificate rotation done")
+				}
 
 				if !nodeMeta.Unschedulable {
-					host.Uncordon(nodeName)
+					_ = host.Uncordon(nodeName)
 				}
 
 				release(lock)

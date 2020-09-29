@@ -16,18 +16,12 @@ limitations under the License.
 
 package cert
 
-import (
-	"time"
+type Certificate interface {
+	// CheckExpiration checks node certificate
+	// returns the certificates which are going to expires
+	CheckExpiration() ([]string, error)
 
-	"github.com/jenting/kucero/pkg/pki/cert/node"
-)
-
-// NewNode checks it is control plane node or worker node
-// then returns the corresponding node certificate interface
-func NewNode(isControlPlaneNode bool, nodeName string, expiryTimeToRotate time.Duration) node.Certificate {
-	if !isControlPlaneNode {
-		return nil
-	}
-
-	return node.NewControlPlaneNode(nodeName, expiryTimeToRotate)
+	// Rotate rotates the node certificates
+	// which are going to expires
+	Rotate(expiryCertificates []string) error
 }
