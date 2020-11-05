@@ -1,4 +1,4 @@
-FROM golang:1.14-stretch as build
+FROM golang:1.15-buster as build
 WORKDIR /src
 
 ARG VERSION=latest
