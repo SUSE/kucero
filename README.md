@@ -28,7 +28,6 @@ By default, kucero enables kubelet client `rotateCertificates: true` and server 
 
 ## Container Requirement Package
 
-- /usr/bin/kubectl
 - /usr/bin/nsenter
 
 ## Kubeadm Compatibility
