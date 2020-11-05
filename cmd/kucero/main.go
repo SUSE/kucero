@@ -162,7 +162,7 @@ func root(cmd *cobra.Command, args []string) {
 		logrus.Infof("Kubelet CSR controller CA key: %s", caKeyPath)
 	}
 
-	rotateCertificateWhenNeeded(nodeName, isControlPlaneNode, client)
+	rotateCertificateWhenNeeded(corev1Node, isControlPlaneNode, client)
 }
 
 // nodeMeta is used to remember information across nodes
@@ -171,7 +171,8 @@ type nodeMeta struct {
 	Unschedulable bool `json:"unschedulable"`
 }
 
-func rotateCertificateWhenNeeded(nodeName string, isControlPlaneNode bool, client *kubernetes.Clientset) {
+func rotateCertificateWhenNeeded(corev1Node *corev1.Node, isControlPlaneNode bool, client *kubernetes.Clientset) {
+	nodeName := corev1Node.GetName()
 	certNode := node.New(isControlPlaneNode, nodeName, expiryTimeToRotate, enableKubeletClientCertRotation, enableKubeletServerCertRotation)
 
 	lock := daemonsetlock.New(client, nodeName, dsNamespace, dsName, lockAnnotation)
@@ -247,8 +248,8 @@ func rotateCertificateWhenNeeded(nodeName string, isControlPlaneNode bool, clien
 			// and try to acquire the lock again.
 			if (len(configsToBeUpdate) > 0 || len(expiryCerts) > 0) && acquire(lock, &nodeMeta) {
 				if !nodeMeta.Unschedulable {
-					_ = host.Cordon(nodeName)
-					_ = host.Drain(nodeName)
+					_ = host.Cordon(client, corev1Node)
+					_ = host.Drain(client, corev1Node)
 				}
 
 				if len(configsToBeUpdate) > 0 {
@@ -272,7 +273,7 @@ func rotateCertificateWhenNeeded(nodeName string, isControlPlaneNode bool, clien
 				}
 
 				if !nodeMeta.Unschedulable {
-					_ = host.Uncordon(nodeName)
+					_ = host.Uncordon(client, corev1Node)
 				}
 
 				release(lock)

@@ -17,47 +17,69 @@ limitations under the License.
 package host
 
 import (
+	"os"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	kubectldrain "k8s.io/kubectl/pkg/drain"
+
 	"github.com/sirupsen/logrus"
 )
 
 // Uncordon executes `kubectl uncordon <node-name>`
 // on the host system
-func Uncordon(nodeName string) error {
+func Uncordon(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
+	nodeName := corev1Node.GetName()
 	logrus.Infof("Uncordoning %s node", nodeName)
 
-	cmd := NewCommand("/usr/bin/kubectl", "uncordon", nodeName)
-	err := cmd.Run()
-	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+	drainer := &kubectldrain.Helper{
+		Client: client,
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
 	}
-
-	return err
+	// RunCordonOrUncordon runs either Cordon or Uncordon.
+	// The desired value "false" is passed to "Unschedulable" to indicate that the node is schedulable.
+	if err := kubectldrain.RunCordonOrUncordon(drainer, corev1Node, false); err != nil {
+		logrus.Errorf("Error uncordonning %s: %v", nodeName, err)
+	}
+	return nil
 }
 
 // Cordon executes `kubectl cordon <node-name>`
 // on the host system
-func Cordon(nodeName string) error {
+func Cordon(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
+	nodeName := corev1Node.GetName()
 	logrus.Infof("Cordoning %s node", nodeName)
 
-	cmd := NewCommand("/usr/bin/kubectl", "cordon", nodeName)
-	err := cmd.Run()
-	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+	drainer := &kubectldrain.Helper{
+		Client: client,
+		Out:    os.Stdout,
+		ErrOut: os.Stderr,
 	}
-
-	return err
+	// RunCordonOrUncordon runs either Cordon or Uncordon.
+	// The desired value "true" is passed to "Unschedulable" to indicate that the node is unschedulable.
+	if err := kubectldrain.RunCordonOrUncordon(drainer, corev1Node, true); err != nil {
+		logrus.Errorf("Error cordonning %s: %v", nodeName, err)
+	}
+	return nil
 }
 
 // Drain executes `kubectl drain --ignore-daemonsets --delete-local-data --force <node-name>`
 // on the host system
-func Drain(nodeName string) error {
+func Drain(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
+	nodeName := corev1Node.GetName()
 	logrus.Infof("Draining %s node", nodeName)
 
-	cmd := NewCommand("/usr/bin/kubectl", "drain", "--ignore-daemonsets", "--delete-local-data", "--force", nodeName)
-	err := cmd.Run()
-	if err != nil {
-		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+	drainer := &kubectldrain.Helper{
+		Client:              client,
+		Force:               true,
+		DeleteLocalData:     true,
+		IgnoreAllDaemonSets: true,
+		Out:                 os.Stdout,
+		ErrOut:              os.Stderr,
 	}
-
-	return err
+	if err := kubectldrain.RunNodeDrain(drainer, nodeName); err != nil {
+		logrus.Errorf("Error draining %s: %v", nodeName, err)
+	}
+	return nil
 }
