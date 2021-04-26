@@ -9,7 +9,7 @@ SHELL := bash
 VERSION ?= $(shell git describe --tags --dirty --always)
 
 # Docker image name parameters
-IMG_NAME ?= jenting/kucero
+IMG_NAME ?= quay.io/jenting/kucero
 IMG_TAG ?= ${VERSION}
 IMG ?= ${IMG_NAME}:${IMG_TAG}
 
@@ -32,6 +32,11 @@ verify:
 test: verify
 	go test -count=1 ./...
 
+e2e-test: docker-build
+	bash +x ./integration/test.sh ${IMG}
+	cd manifest && kustomize create --autodetect 2>/dev/null || true
+	kustomize build manifest | kubectl delete -f -
+
 kucero: test
 	CGO_ENABLED=0 go build -ldflags "-s -w -X main.version=$(VERSION)" -o cmd/kucero/kucero cmd/kucero/*.go
 
@@ -53,11 +58,13 @@ docker-push:
 
 # Deploy manifest
 deploy-manifest:
+	cd manifest && kustomize create --autodetect 2>/dev/null || true
 	cd manifest && kustomize edit set image kucero=${IMG}
 	kustomize build manifest | kubectl apply -f -
 
 # Destroy manifest
 destroy-manifest:
+	cd manifest && kustomize create --autodetect 2>/dev/null || true
 	kustomize build manifest | kubectl delete -f -
 
 clean:

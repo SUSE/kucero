@@ -16,3 +16,6 @@ vendor/
 
 # Binary
 cmd/kucero/kucero
+
+# kustomize
+manifest/kustomization.yaml
