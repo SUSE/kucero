@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/version"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/jenting/kucero/pkg/host"
@@ -34,7 +36,21 @@ func kubeadmAlphaCertsCheckExpiration(expiryTimeToRotate time.Duration, clock cl
 	expiryCertificates := []string{}
 
 	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "check-expiration")
+	cmd := host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "version", "-oshort")
+	out, err := cmd.Output()
+	if err != nil {
+		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+		return expiryCertificates, err
+	}
+
+	// kubeadm >= 1.20.0: kubeadm certs check-expiration
+	// otherwise: kubeadm alpha certs check-expiration
+	ver := strings.TrimSuffix(string(out), "\n")
+	if version.MustParseSemantic(ver).AtLeast(version.MustParseSemantic("v1.20.0")) {
+		cmd = host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "certs", "check-expiration")
+	} else {
+		cmd = host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "check-expiration")
+	}
 	stdout, err := cmd.Output()
 	if err != nil {
 		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
@@ -55,7 +71,21 @@ func kubeadmAlphaCertsCheckExpiration(expiryTimeToRotate time.Duration, clock cl
 
 func kubeadmAlphaCertsRenew(certificateName, certificatePath string) error {
 	// Relies on hostPID:true and privileged:true to enter host mount space
-	cmd := host.NewCommand("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certificateName)
+	cmd := host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "version", "-oshort")
+	out, err := cmd.Output()
+	if err != nil {
+		logrus.Errorf("Error invoking %s: %v", cmd.Args, err)
+		return err
+	}
+
+	// kubeadm >= 1.20.0: kubeadm certs renew <certificate-name>
+	// otherwise: kubeadm alpha certs renew <certificate-name>
+	ver := strings.TrimSuffix(string(out), "\n")
+	if version.MustParseSemantic(ver).AtLeast(version.MustParseSemantic("v1.20.0")) {
+		cmd = host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "certs", "renew", certificateName)
+	} else {
+		cmd = host.NewCommandWithStdout("/usr/bin/nsenter", "-m/proc/1/ns/mnt", "/usr/bin/kubeadm", "alpha", "certs", "renew", certificateName)
+	}
 	return cmd.Run()
 }
 
