@@ -22,8 +22,9 @@ import (
 	"fmt"
 
 	authorization "k8s.io/api/authorization/v1beta1"
-	capi "k8s.io/api/certificates/v1beta1"
+	capi "k8s.io/api/certificates/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
@@ -68,8 +69,7 @@ func recognizers() []csrRecognizer {
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests/status,verbs=patch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 
-func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *CertificateSigningRequestSigningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var csr capi.CertificateSigningRequest
 	if err := r.Client.Get(ctx, req.NamespacedName, &csr); client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, fmt.Errorf("error %q getting CSR", err)
@@ -122,7 +122,7 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request)
 
 				// approve the csr
 				appendApprovalCondition(&csr, recognizer.successMessage)
-				_, err = r.ClientSet.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(&csr)
+				_, err = r.ClientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr.Name, &csr, metav1.UpdateOptions{})
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("error updating approval for csr: %v", err)
 				}
@@ -152,7 +152,7 @@ func (r *CertificateSigningRequestSigningReconciler) authorize(csr *capi.Certifi
 			ResourceAttributes: &rattrs,
 		},
 	}
-	sar, err := r.ClientSet.AuthorizationV1beta1().SubjectAccessReviews().Create(sar)
+	sar, err := r.ClientSet.AuthorizationV1beta1().SubjectAccessReviews().Create(context.TODO(), sar, metav1.CreateOptions{})
 	if err != nil {
 		return false, err
 	}

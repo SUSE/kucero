@@ -17,13 +17,14 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	capi "k8s.io/api/certificates/v1beta1"
+	capi "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -139,7 +140,7 @@ func root(cmd *cobra.Command, args []string) {
 		logrus.Fatal(err)
 	}
 
-	corev1Node, err := client.CoreV1().Nodes().Get(nodeName, metav1.GetOptions{})
+	corev1Node, err := client.CoreV1().Nodes().Get(context.TODO(), nodeName, metav1.GetOptions{})
 	if err != nil {
 		logrus.Fatal(err)
 	}

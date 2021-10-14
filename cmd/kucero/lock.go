@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"time"
+
 	"github.com/sirupsen/logrus"
 	"github.com/weaveworks/kured/pkg/daemonsetlock"
 )
@@ -33,7 +35,7 @@ func holding(lock *daemonsetlock.DaemonSetLock, metadata interface{}) bool {
 }
 
 func acquire(lock *daemonsetlock.DaemonSetLock, metadata interface{}) bool {
-	holding, holder, err := lock.Acquire(metadata)
+	holding, holder, err := lock.Acquire(metadata, time.Minute)
 	switch {
 	case err != nil:
 		logrus.Errorf("Error acquiring lock: %v", err)

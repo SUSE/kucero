@@ -17,6 +17,7 @@ limitations under the License.
 package host
 
 import (
+	"context"
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +34,7 @@ func Uncordon(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
 	logrus.Infof("Uncordoning %s node", nodeName)
 
 	drainer := &kubectldrain.Helper{
+		Ctx:    context.TODO(),
 		Client: client,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
@@ -52,6 +54,7 @@ func Cordon(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
 	logrus.Infof("Cordoning %s node", nodeName)
 
 	drainer := &kubectldrain.Helper{
+		Ctx:    context.TODO(),
 		Client: client,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
@@ -71,9 +74,10 @@ func Drain(client *kubernetes.Clientset, corev1Node *corev1.Node) error {
 	logrus.Infof("Draining %s node", nodeName)
 
 	drainer := &kubectldrain.Helper{
+		Ctx:                 context.TODO(),
 		Client:              client,
 		Force:               true,
-		DeleteLocalData:     true,
+		DeleteEmptyDirData:  true,
 		IgnoreAllDaemonSets: true,
 		Out:                 os.Stdout,
 		ErrOut:              os.Stderr,

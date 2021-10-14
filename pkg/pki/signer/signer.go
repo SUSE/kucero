@@ -22,7 +22,7 @@ import (
 	"encoding/pem"
 	"time"
 
-	capi "k8s.io/api/certificates/v1beta1"
+	capi "k8s.io/api/certificates/v1"
 
 	"github.com/jenting/kucero/pkg/pki/authority"
 )
