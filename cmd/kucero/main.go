@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
-	k8sclient "k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -204,7 +203,7 @@ func rotateCertificateWhenNeeded(corev1Node *corev1.Node, isControlPlaneNode boo
 
 			if err := (&controllers.CertificateSigningRequestSigningReconciler{
 				Client:        mgr.GetClient(),
-				ClientSet:     k8sclient.NewForConfigOrDie(mgr.GetConfig()),
+				ClientSet:     kubernetes.NewForConfigOrDie(mgr.GetConfig()),
 				Scheme:        mgr.GetScheme(),
 				Signer:        signer,
 				EventRecorder: mgr.GetEventRecorderFor("CSRSigningReconciler"),

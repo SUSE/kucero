@@ -24,7 +24,7 @@ import (
 	authorization "k8s.io/api/authorization/v1beta1"
 	capi "k8s.io/api/certificates/v1"
 	capiv1beta1 "k8s.io/api/certificates/v1beta1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -86,7 +86,7 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(ctx context.Conte
 		x509cr, err := cert.ParseCSR(csr.Spec.Request)
 		if err != nil {
 			logrus.Errorf("Unable to parse csr: %v", err)
-			r.EventRecorder.Event(&csr, v1.EventTypeWarning, "SigningFailed", "Unable to parse the CSR request")
+			r.EventRecorder.Event(&csr, corev1.EventTypeWarning, "SigningFailed", "Unable to parse the CSR request")
 			return ctrl.Result{}, nil
 		}
 
@@ -129,7 +129,7 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(ctx context.Conte
 					return ctrl.Result{}, fmt.Errorf("error updating approval for csr: %v", err)
 				}
 
-				r.EventRecorder.Event(&csr, v1.EventTypeNormal, "Signed", "The CSR has been signed")
+				r.EventRecorder.Event(&csr, corev1.EventTypeNormal, "Signed", "The CSR has been signed")
 			} else {
 				return ctrl.Result{}, fmt.Errorf("SubjectAccessReview failed")
 			}
