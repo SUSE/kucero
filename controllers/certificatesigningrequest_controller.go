@@ -23,16 +23,18 @@ import (
 
 	authorization "k8s.io/api/authorization/v1beta1"
 	capi "k8s.io/api/certificates/v1"
+	capiv1beta1 "k8s.io/api/certificates/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/sirupsen/logrus"
+	velerodiscovery "github.com/vmware-tanzu/velero/pkg/discovery"
 
 	"github.com/jenting/kucero/pkg/pki/cert"
 	"github.com/jenting/kucero/pkg/pki/signer"
@@ -40,7 +42,7 @@ import (
 
 // CertificateSigningRequestSigningReconciler reconciles a CertificateSigningRequest object
 type CertificateSigningRequestSigningReconciler struct {
-	Client        ctrlclient.Client
+	Client        client.Client
 	ClientSet     k8sclient.Interface
 	Scheme        *runtime.Scheme
 	Signer        *signer.Signer
@@ -168,7 +170,28 @@ func appendApprovalCondition(csr *capi.CertificateSigningRequest, message string
 }
 
 func (r *CertificateSigningRequestSigningReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&capi.CertificateSigningRequest{}).
-		Complete(r)
+	discoveryHelper, err := velerodiscovery.NewHelper(r.ClientSet.Discovery(), &logrus.Logger{})
+	if err != nil {
+		return err
+	}
+	gvr, _, err := discoveryHelper.ResourceFor(schema.GroupVersionResource{
+		Group:    "certificates.k8s.io",
+		Resource: "CertificateSigningRequest",
+	})
+	if err != nil {
+		return err
+	}
+
+	switch gvr.Version {
+	case "v1beta1":
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&capiv1beta1.CertificateSigningRequest{}).
+			Complete(r)
+	case "v1":
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&capi.CertificateSigningRequest{}).
+			Complete(r)
+	default:
+		return fmt.Errorf("unsupported certificates.k8s.io/%s", gvr.Version)
+	}
 }

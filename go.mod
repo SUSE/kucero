@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.2.1
+	github.com/vmware-tanzu/velero v1.7.0
 	github.com/weaveworks/kured v0.0.0-20211008084731-7c33ad8b6e60
 	k8s.io/api v0.22.2
 	k8s.io/apimachinery v0.22.2
