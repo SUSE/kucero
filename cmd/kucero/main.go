@@ -24,12 +24,13 @@ import (
 	"syscall"
 	"time"
 
-	capi "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	k8sclient "k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -41,6 +42,7 @@ import (
 	"github.com/jenting/kucero/pkg/host"
 	"github.com/jenting/kucero/pkg/pki/node"
 	"github.com/jenting/kucero/pkg/pki/signer"
+	//+kubebuilder:scaffold:imports
 )
 
 var (
@@ -61,9 +63,8 @@ var (
 )
 
 func init() {
-	_ = capi.AddToScheme(scheme)
-	_ = corev1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	//+kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -210,7 +211,7 @@ func rotateCertificateWhenNeeded(corev1Node *corev1.Node, isControlPlaneNode boo
 			}).SetupWithManager(mgr); err != nil {
 				logrus.Fatal(err)
 			}
-			// +kubebuilder:scaffold:builder
+			//+kubebuilder:scaffold:builder
 
 			logrus.Info("Starting manager")
 			if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
