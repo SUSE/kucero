@@ -68,7 +68,7 @@ patchesStrategicMerge:
           args:
           - --polling-period=1m
           - --renew-before=8761h
-          - --enable-kubelet-csr-controller=false
+          - --enable-kubelet-csr-controller=true
           - --enable-kubelet-server-cert-rotation=false
 EOF
 kustomize build manifest | kubectl apply -f -
