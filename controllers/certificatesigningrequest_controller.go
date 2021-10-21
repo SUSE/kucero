@@ -22,16 +22,19 @@ import (
 	"fmt"
 
 	authorization "k8s.io/api/authorization/v1beta1"
-	capi "k8s.io/api/certificates/v1beta1"
-	v1 "k8s.io/api/core/v1"
+	capi "k8s.io/api/certificates/v1"
+	capiv1beta1 "k8s.io/api/certificates/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/sirupsen/logrus"
+	velerodiscovery "github.com/vmware-tanzu/velero/pkg/discovery"
 
 	"github.com/jenting/kucero/pkg/pki/cert"
 	"github.com/jenting/kucero/pkg/pki/signer"
@@ -39,7 +42,7 @@ import (
 
 // CertificateSigningRequestSigningReconciler reconciles a CertificateSigningRequest object
 type CertificateSigningRequestSigningReconciler struct {
-	Client        ctrlclient.Client
+	Client        client.Client
 	ClientSet     k8sclient.Interface
 	Scheme        *runtime.Scheme
 	Signer        *signer.Signer
@@ -68,8 +71,7 @@ func recognizers() []csrRecognizer {
 // +kubebuilder:rbac:groups=certificates.k8s.io,resources=certificatesigningrequests/status,verbs=patch
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 
-func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *CertificateSigningRequestSigningReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var csr capi.CertificateSigningRequest
 	if err := r.Client.Get(ctx, req.NamespacedName, &csr); client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, fmt.Errorf("error %q getting CSR", err)
@@ -84,7 +86,7 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request)
 		x509cr, err := cert.ParseCSR(csr.Spec.Request)
 		if err != nil {
 			logrus.Errorf("Unable to parse csr: %v", err)
-			r.EventRecorder.Event(&csr, v1.EventTypeWarning, "SigningFailed", "Unable to parse the CSR request")
+			r.EventRecorder.Event(&csr, corev1.EventTypeWarning, "SigningFailed", "Unable to parse the CSR request")
 			return ctrl.Result{}, nil
 		}
 
@@ -122,12 +124,12 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(req ctrl.Request)
 
 				// approve the csr
 				appendApprovalCondition(&csr, recognizer.successMessage)
-				_, err = r.ClientSet.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(&csr)
+				_, err = r.ClientSet.CertificatesV1().CertificateSigningRequests().UpdateApproval(context.TODO(), csr.Name, &csr, metav1.UpdateOptions{})
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("error updating approval for csr: %v", err)
 				}
 
-				r.EventRecorder.Event(&csr, v1.EventTypeNormal, "Signed", "The CSR has been signed")
+				r.EventRecorder.Event(&csr, corev1.EventTypeNormal, "Signed", "The CSR has been signed")
 			} else {
 				return ctrl.Result{}, fmt.Errorf("SubjectAccessReview failed")
 			}
@@ -152,7 +154,7 @@ func (r *CertificateSigningRequestSigningReconciler) authorize(csr *capi.Certifi
 			ResourceAttributes: &rattrs,
 		},
 	}
-	sar, err := r.ClientSet.AuthorizationV1beta1().SubjectAccessReviews().Create(sar)
+	sar, err := r.ClientSet.AuthorizationV1beta1().SubjectAccessReviews().Create(context.TODO(), sar, metav1.CreateOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -168,7 +170,28 @@ func appendApprovalCondition(csr *capi.CertificateSigningRequest, message string
 }
 
 func (r *CertificateSigningRequestSigningReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&capi.CertificateSigningRequest{}).
-		Complete(r)
+	discoveryHelper, err := velerodiscovery.NewHelper(r.ClientSet.Discovery(), &logrus.Logger{})
+	if err != nil {
+		return err
+	}
+	gvr, _, err := discoveryHelper.ResourceFor(schema.GroupVersionResource{
+		Group:    "certificates.k8s.io",
+		Resource: "CertificateSigningRequest",
+	})
+	if err != nil {
+		return err
+	}
+
+	switch gvr.Version {
+	case "v1beta1":
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&capiv1beta1.CertificateSigningRequest{}).
+			Complete(r)
+	case "v1":
+		return ctrl.NewControllerManagedBy(mgr).
+			For(&capi.CertificateSigningRequest{}).
+			Complete(r)
+	default:
+		return fmt.Errorf("unsupported certificates.k8s.io/%s", gvr.Version)
+	}
 }

@@ -49,7 +49,7 @@ vet:
 	go vet ./...
 
 # Build the docker image
-docker-build: test
+docker-build:
 	docker build --build-arg VERSION=${VERSION} -t ${IMG} .
 
 # Push the docker image
