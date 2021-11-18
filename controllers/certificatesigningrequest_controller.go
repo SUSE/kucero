@@ -21,7 +21,7 @@ import (
 	"crypto/x509"
 	"fmt"
 
-	authorization "k8s.io/api/authorization/v1beta1"
+	authorization "k8s.io/api/authorization/v1"
 	capi "k8s.io/api/certificates/v1"
 	capiv1beta1 "k8s.io/api/certificates/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -154,7 +154,7 @@ func (r *CertificateSigningRequestSigningReconciler) authorize(csr *capi.Certifi
 			ResourceAttributes: &rattrs,
 		},
 	}
-	sar, err := r.ClientSet.AuthorizationV1beta1().SubjectAccessReviews().Create(context.TODO(), sar, metav1.CreateOptions{})
+	sar, err := r.ClientSet.AuthorizationV1().SubjectAccessReviews().Create(context.TODO(), sar, metav1.CreateOptions{})
 	if err != nil {
 		return false, err
 	}
@@ -163,9 +163,11 @@ func (r *CertificateSigningRequestSigningReconciler) authorize(csr *capi.Certifi
 
 func appendApprovalCondition(csr *capi.CertificateSigningRequest, message string) {
 	csr.Status.Conditions = append(csr.Status.Conditions, capi.CertificateSigningRequestCondition{
-		Type:    capi.CertificateApproved,
-		Reason:  "AutoApproved by kucero",
-		Message: message,
+		Type:           capi.CertificateApproved,
+		Status:         corev1.ConditionTrue,
+		Reason:         "AutoApproved by kucero",
+		Message:        message,
+		LastUpdateTime: metav1.Now(),
 	})
 }
 
