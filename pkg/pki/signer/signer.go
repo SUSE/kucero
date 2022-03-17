@@ -23,6 +23,7 @@ import (
 	"time"
 
 	capi "k8s.io/api/certificates/v1"
+	"k8s.io/client-go/util/certificate/csr"
 
 	"github.com/jenting/kucero/pkg/pki/authority"
 )
@@ -45,17 +46,35 @@ func NewSigner(caFile, caKeyFile string, duration time.Duration) (*Signer, error
 	return ret, nil
 }
 
-func (s *Signer) Sign(x509cr *x509.CertificateRequest, usages []capi.KeyUsage) ([]byte, error) {
+func (s *Signer) Sign(x509cr *x509.CertificateRequest, spec capi.CertificateSigningRequestSpec) ([]byte, error) {
 	currCA, err := s.caProvider.currentCA()
 	if err != nil {
 		return nil, err
 	}
 	der, err := currCA.Sign(x509cr.Raw, authority.PermissiveSigningPolicy{
-		TTL:    s.certTTL,
-		Usages: usages,
+		TTL:    s.duration(spec.ExpirationSeconds),
+		Usages: spec.Usages,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), nil
+}
+
+func (s *Signer) duration(expirationSeconds *int32) time.Duration {
+	if expirationSeconds == nil {
+		return s.certTTL
+	}
+
+	// honor requested duration is if it is less than the default TTL
+	// use 10 min (2x hard coded backdate above) as a sanity check lower bound
+	const min = 10 * time.Minute
+	switch requestedDuration := csr.ExpirationSecondsToDuration(*expirationSeconds); {
+	case requestedDuration > s.certTTL:
+		return s.certTTL
+	case requestedDuration < min:
+		return min
+	default:
+		return requestedDuration
+	}
 }
