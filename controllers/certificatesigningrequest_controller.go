@@ -112,7 +112,7 @@ func (r *CertificateSigningRequestSigningReconciler) Reconcile(ctx context.Conte
 
 				// sign the csr before approve
 				// otherwise, the kube-controller-manager will sign the csr
-				cert, err := r.Signer.Sign(x509cr, csr.Spec.Usages)
+				cert, err := r.Signer.Sign(x509cr, csr.Spec)
 				if err != nil {
 					return ctrl.Result{}, fmt.Errorf("error auto signing csr: %v", err)
 				}
