@@ -41,7 +41,7 @@ spec:
             type: File
       containers:
         - name: kucero
-          image: quay.io/jenting/kucero:v1.5.2
+          image: quay.io/jenting/kucero:v1.6.0
           imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true # Give permission to nsenter /proc/1/ns/mnt
