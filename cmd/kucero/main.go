@@ -145,11 +145,9 @@ func root(cmd *cobra.Command, args []string) {
 		logrus.Fatal(err)
 	}
 
-	isControlPlaneNode := true
-	_, exist := corev1Node.GetLabels()["node-role.kubernetes.io/master"]
-	if !exist {
-		isControlPlaneNode = false
-	}
+	_, master := corev1Node.GetLabels()["node-role.kubernetes.io/master"]
+	_, controlPlane := corev1Node.GetLabels()["node-role.kubernetes.io/control-plane"]
+	isControlPlaneNode := master || controlPlane
 
 	logrus.Infof("Node Name: %s", nodeName)
 	logrus.Infof("Lock Annotation: %s/%s:%s", dsNamespace, dsName, lockAnnotation)
