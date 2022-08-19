@@ -13,6 +13,7 @@ jobs:
         go:
           - '1.17'
           - '1.18'
+          - '1.19'
     runs-on: ubuntu-latest
     steps:
       - name: Set up Go ${{ matrix.go }}
