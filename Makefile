@@ -9,7 +9,7 @@ SHELL := bash
 VERSION ?= $(shell git describe --tags --dirty --always)
 
 # Docker image name parameters
-IMG_NAME ?= quay.io/jenting/kucero
+IMG_NAME ?= jenting/kucero
 IMG_TAG ?= ${VERSION}
 IMG ?= ${IMG_NAME}:${IMG_TAG}
 
