@@ -33,7 +33,6 @@ jobs:
       max-parallel: 1
       matrix:
         k8s:
-          - v1.15.12
           - v1.16.15
           - v1.17.17
           - v1.18.20
