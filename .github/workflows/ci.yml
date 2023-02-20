@@ -53,7 +53,7 @@ jobs:
 
       - name: Install kustomize
         run: |
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v3.10.0/hack/install_kustomize.sh" | bash
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v4.5.7/hack/install_kustomize.sh" | bash -s -- 4.5.7
           sudo mv kustomize /usr/local/bin/kustomize
 
       - name: E2E Test
