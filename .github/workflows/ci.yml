@@ -36,13 +36,13 @@ jobs:
         k8s:
           - v1.19.16
           - v1.20.15
-          - v1.21.14
-          - v1.22.17
-          - v1.23.17
+          - v1.21.12
+          - v1.22.15
+          - v1.23.13
           - v1.24.12
           - v1.25.8
           - v1.26.3
-          - v1.27.1
+          - v1.27.0
     steps:
       - name: Check out code into the Go module directory
         uses: actions/checkout@v3
