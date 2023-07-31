@@ -478,8 +478,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/subosito/gotenv v1.2.0/go.mod h1:N0PQaV/YGNqwC0u51sEeR/aUtSLEXKX9iv69rRypqCw=
-github.com/vmware-tanzu/velero v1.11.0 h1:rxuLXoeJA1Qv6HMcNqubx5Nmz/+KtqNT7w9I0UGvmqs=
-github.com/vmware-tanzu/velero v1.11.0/go.mod h1:j5+xxWWmYfLeJ7IjYCLuC+P1ZeSVKRyjYep3SFknRRw=
+github.com/vmware-tanzu/velero v1.11.1 h1:Jw8P1DetGBhmAZQkMRFu2vBvJS0YOR85XfKNpe4BlV8=
+github.com/vmware-tanzu/velero v1.11.1/go.mod h1:ZBLIZSSNb6VzCea+rwcMsixm8AvvxCm6j8UjGiPv7XY=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a h1:iHQFuASiFNyPMF0MYU9sW15wxEwNwxwxe8tDSP935wg=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a/go.mod h1:7GhHjYd1Tj6Jg9BQ5uUiB90aHxjW1JG6JvPB/YPyzWA=
 github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f/go.mod h1:N2zxlSyiKSe5eX1tZViRH5QA0qijqEDrYZiPEAiq3wU=
