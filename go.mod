@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
-	github.com/vmware-tanzu/velero v1.11.0
+	github.com/vmware-tanzu/velero v1.11.1
 	github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a
 	k8s.io/api v0.27.4
 	k8s.io/apimachinery v0.27.4
