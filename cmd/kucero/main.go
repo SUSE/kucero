@@ -32,6 +32,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -183,9 +184,10 @@ func rotateCertificateWhenNeeded(corev1Node *corev1.Node, isControlPlaneNode boo
 	if enableKubeletCSRController && isControlPlaneNode {
 		go func() {
 			mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-				Scheme:                  scheme,
-				MetricsBindAddress:      metricsAddr,
-				Port:                    9443,
+				Scheme: scheme,
+				Metrics: metricsserver.Options{
+					BindAddress: metricsAddr,
+				},
 				LeaderElection:          true,
 				LeaderElectionNamespace: dsNamespace,
 				LeaderElectionID:        leaderElectionID,
