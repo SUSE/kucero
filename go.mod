@@ -12,7 +12,7 @@ require (
 	k8s.io/apiserver v0.28.1
 	k8s.io/client-go v0.28.1
 	k8s.io/kubectl v0.28.0
-	sigs.k8s.io/controller-runtime v0.16.1
+	sigs.k8s.io/controller-runtime v0.16.2
 	sigs.k8s.io/yaml v1.3.0
 )
 
