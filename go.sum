@@ -168,8 +168,8 @@ github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
-github.com/vmware-tanzu/velero v1.12.0 h1:gN8PbQMYOAMv8OYE3RkIvxr6s6IoMS0Daxc+IQN0X5U=
-github.com/vmware-tanzu/velero v1.12.0/go.mod h1:rY2UfdC2K9je9jtjnSBsZr8Zmg8hzePjG2W00Oe/CT4=
+github.com/vmware-tanzu/velero v1.12.1 h1:WKmSmyE5haJpQMuw+RzA3bNTGHZP80jnDEJutsthmF8=
+github.com/vmware-tanzu/velero v1.12.1/go.mod h1:/DciEpV9LMokDQoZAp+bH4CQInmFyw3cU2CKiqrHghs=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a h1:iHQFuASiFNyPMF0MYU9sW15wxEwNwxwxe8tDSP935wg=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a/go.mod h1:7GhHjYd1Tj6Jg9BQ5uUiB90aHxjW1JG6JvPB/YPyzWA=
 github.com/xlab/treeprint v1.2.0 h1:HzHnuAF1plUN2zGlAFHbSQP2qJ0ZAD3XF5XD7OesXRQ=
