@@ -1,6 +1,8 @@
 module github.com/jenting/kucero
 
-go 1.20
+go 1.21
+
+toolchain go1.21.3
 
 require (
 	github.com/sirupsen/logrus v1.9.3
@@ -11,7 +13,7 @@ require (
 	k8s.io/apimachinery v0.29.0
 	k8s.io/apiserver v0.29.0
 	k8s.io/client-go v0.29.0
-	k8s.io/kubectl v0.28.0
+	k8s.io/kubectl v0.29.0
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -84,7 +86,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.28.3 // indirect
-	k8s.io/cli-runtime v0.28.0 // indirect
+	k8s.io/cli-runtime v0.29.0 // indirect
 	k8s.io/component-base v0.29.0 // indirect
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
