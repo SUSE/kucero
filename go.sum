@@ -138,7 +138,6 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
 github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
-github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo/v2 v2.19.0 h1:9Cnnf7UHo57Hy3k6/m5k3dRfGTMXGvxhHFvkDTCTpvA=
 github.com/onsi/ginkgo/v2 v2.19.0/go.mod h1:rlwLi9PilAFJ8jCg9UE1QP6VBpd6/xj3SRC0d6TU0To=
 github.com/onsi/gomega v1.33.1 h1:dsYjIxxSR755MDmKVsaFQTE22ChNBcuuTWgkUDSubOk=
@@ -185,8 +184,8 @@ github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO
 github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsTg=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/vmware-tanzu/velero v1.14.1 h1:HYj73scn7ZqtfTanjW/X4W0Hn3w/qcfoRbrHCWM52iI=
-github.com/vmware-tanzu/velero v1.14.1/go.mod h1:/OzHzTvbevkkX+bK/BS4AgYMv6nKuOgsybuuvLWkSS0=
+github.com/vmware-tanzu/velero v1.15.0 h1:+S/lNSDwQqlROGWfmNuZnnabopGmco978COIt3AP09c=
+github.com/vmware-tanzu/velero v1.15.0/go.mod h1:28VhzPJRBo91GBRkgs4Ird0fx2vCpepBWmhF+5Pn/WQ=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a h1:iHQFuASiFNyPMF0MYU9sW15wxEwNwxwxe8tDSP935wg=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a/go.mod h1:7GhHjYd1Tj6Jg9BQ5uUiB90aHxjW1JG6JvPB/YPyzWA=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
