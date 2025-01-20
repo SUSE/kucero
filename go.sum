@@ -149,8 +149,8 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/vmware-tanzu/velero v1.15.1 h1:kKT4I6ZMQn+aiPYIalF+0Ui8VLbt9XK+3jwnCU09T0M=
-github.com/vmware-tanzu/velero v1.15.1/go.mod h1:bZbnBC9OcwXfsovU0uCHwPlbm3ba8N9fwvBkwnU2vls=
+github.com/vmware-tanzu/velero v1.15.2 h1:zB4nRgknByjFasZLb7XHU/OsQ+1fs9iaIL3yhzuIeMQ=
+github.com/vmware-tanzu/velero v1.15.2/go.mod h1:bZbnBC9OcwXfsovU0uCHwPlbm3ba8N9fwvBkwnU2vls=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a h1:iHQFuASiFNyPMF0MYU9sW15wxEwNwxwxe8tDSP935wg=
 github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a/go.mod h1:7GhHjYd1Tj6Jg9BQ5uUiB90aHxjW1JG6JvPB/YPyzWA=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
