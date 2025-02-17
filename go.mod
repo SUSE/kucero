@@ -9,10 +9,10 @@ require (
 	github.com/spf13/cobra v1.9.1
 	github.com/vmware-tanzu/velero v1.15.2
 	github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a
-	k8s.io/api v0.32.1
-	k8s.io/apimachinery v0.32.1
+	k8s.io/api v0.32.2
+	k8s.io/apimachinery v0.32.2
 	k8s.io/apiserver v0.32.1
-	k8s.io/client-go v0.32.1
+	k8s.io/client-go v0.32.2
 	k8s.io/kubectl v0.32.0
 	sigs.k8s.io/controller-runtime v0.20.2
 	sigs.k8s.io/yaml v1.4.0
