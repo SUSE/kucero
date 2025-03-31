@@ -2,7 +2,7 @@ module github.com/jenting/kucero
 
 go 1.23.0
 
-toolchain go1.23.4
+toolchain go1.24.1
 
 require (
 	github.com/sirupsen/logrus v1.9.3
@@ -14,7 +14,7 @@ require (
 	k8s.io/apiserver v0.32.3
 	k8s.io/client-go v0.32.3
 	k8s.io/kubectl v0.32.0
-	sigs.k8s.io/controller-runtime v0.20.3
+	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/yaml v1.4.0
 )
 
