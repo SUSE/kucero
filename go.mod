@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.9.1
-	github.com/vmware-tanzu/velero v1.15.2
+	github.com/vmware-tanzu/velero v1.16.0
 	github.com/weaveworks/kured v0.0.0-20220810042013-9d4ebfc1f82a
 	k8s.io/api v0.33.0
 	k8s.io/apimachinery v0.33.0
